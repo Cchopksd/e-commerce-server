@@ -3,16 +3,18 @@ import mongoose, { HydratedDocument } from 'mongoose';
 
 export type ProductDocument = HydratedDocument<Product>;
 
+class image {
+  image_url: string;
+  public_id: string;
+}
+
 @Schema()
 export class Product {
-  @Prop({ required: true })
-  user_id: string;
-
   @Prop({ required: true })
   name: string;
 
   @Prop({ required: true })
-  images: string[];
+  images: image[];
 
   @Prop({ required: true })
   price: number;
