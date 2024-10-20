@@ -8,6 +8,7 @@ import {
   Delete,
   UseInterceptors,
   UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -38,8 +39,19 @@ export class ProductController {
 
   @Public()
   @Get()
-  findAll() {
-    return this.productService.findAll();
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const items = await this.productService.findAll(page, limit);
+    const count = await this.productService.countPage();
+
+    return {
+      ...count,
+      page,
+      limit,
+      items,
+    };
   }
 
   @Public()

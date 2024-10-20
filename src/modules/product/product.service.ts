@@ -9,7 +9,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
-import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class ProductService {
@@ -50,9 +49,22 @@ export class ProductService {
     }
   }
 
-  async findAll() {
-    const product = await this.productModel.find();
+  async findAll(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const product = await this.productModel
+      .find()
+      .skip(skip)
+      .limit(limit)
+      .exec();
     return product;
+  }
+
+  async countPage() {
+    const total_items = await this.productModel.countDocuments().exec();
+    const total_page = Math.ceil(total_items / 10);
+
+    const result = { total_items, total_page };
+    return result;
   }
 
   async findOne(id: string) {
