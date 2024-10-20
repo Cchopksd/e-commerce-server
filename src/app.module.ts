@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AddressModule } from './modules/address/address.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ProductModule } from './modules/product/product.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ProductModule } from './modules/product/product.module';
     AddressModule,
     ProductModule,
     PaymentModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
