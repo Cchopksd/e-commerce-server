@@ -29,10 +29,10 @@ export class Address {
   detail: string;
 
   @Prop({ default: Date.now })
-  createdAt: Date;
+  created_at: Date;
 
   @Prop({ default: Date.now })
-  updatedAt: Date;
+  updated_at: Date;
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);

@@ -35,10 +35,10 @@ export class Product {
   sale_out: number;
 
   @Prop({ default: Date.now })
-  createdAt: Date;
+  created_at: Date;
 
   @Prop({ default: Date.now })
-  updatedAt: Date;
+  updated_at: Date;
 }
 
 // Create the schema
