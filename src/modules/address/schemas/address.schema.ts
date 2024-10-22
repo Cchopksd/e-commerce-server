@@ -27,6 +27,12 @@ export class Address {
 
   @Prop({ required: true })
   detail: string;
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop({ default: Date.now })
+  updatedAt: Date;
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);

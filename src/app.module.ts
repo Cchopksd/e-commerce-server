@@ -12,6 +12,7 @@ import { AddressModule } from './modules/address/address.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ProductModule } from './modules/product/product.module';
 import { HealthModule } from './modules/health/health.module';
+import { CartModule } from './modules/cart/cart.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { HealthModule } from './modules/health/health.module';
     AddressModule,
     ProductModule,
     PaymentModule,
+    CartModule,
     HealthModule,
   ],
   controllers: [AppController],

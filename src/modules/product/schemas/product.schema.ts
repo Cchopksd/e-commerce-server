@@ -33,6 +33,12 @@ export class Product {
 
   @Prop({ required: true })
   sale_out: number;
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop({ default: Date.now })
+  updatedAt: Date;
 }
 
 // Create the schema

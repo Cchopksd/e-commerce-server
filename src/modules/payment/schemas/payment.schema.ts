@@ -39,6 +39,12 @@ export class User {
     required: true,
   })
   role: UserRole;
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop({ default: Date.now })
+  updatedAt: Date;
 }
 
 // Create the schema
