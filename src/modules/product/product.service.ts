@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -9,6 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { validateObjectId } from 'src/helpers/objectIdHelper';
 
 @Injectable()
 export class ProductService {
@@ -50,13 +52,18 @@ export class ProductService {
   }
 
   async findAll(page: number, limit: number) {
-    const skip = (page - 1) * limit;
-    const product = await this.productModel
-      .find()
-      .skip(skip)
-      .limit(limit)
-      .exec();
-    return product;
+    try {
+      const skip = (page - 1) * limit;
+      const product = await this.productModel
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .exec();
+      return product;
+    } catch (error) {
+      console.error('Error fetch product:', error);
+      throw new InternalServerErrorException('Error fetching product');
+    }
   }
 
   async countPage() {
@@ -68,32 +75,54 @@ export class ProductService {
   }
 
   async findOne(id: string) {
-    const product = await this.productModel.findById(id);
-    return product;
+    // Validate the ObjectId format
+    validateObjectId(id, 'Product');
+
+    try {
+      const product = await this.productModel.findById(id);
+      if (!product) {
+        throw new BadRequestException({
+          message: 'Cannot find item',
+          statusCode: 400,
+        });
+      }
+      return product;
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error fetching product');
+    }
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
+    validateObjectId(id, 'Product');
     const product = await this.productModel.findById(id);
     return `This action updates a #${id} product`;
   }
 
   async remove(id: string) {
-    const product = await this.productModel.findById(id);
+    validateObjectId(id, 'Product');
 
+    const product = await this.productModel.findById(id);
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    const removeImagePromises = product.images.map(async (file) => {
-      await this.cloudinaryService.deleteImage(file.public_id);
-    });
+    try {
+      const removeImagePromises = product.images.map(async (file) => {
+        await this.cloudinaryService.deleteImage(file.public_id);
+      });
 
-    const removeImageResults = await Promise.all(removeImagePromises);
-    console.log(removeImageResults);
+      await Promise.all(removeImagePromises);
 
-    const result = await this.productModel.findByIdAndDelete(id);
-    console.log(result);
+      await this.productModel.findByIdAndDelete(id);
 
-    return `This action removes a product with ID #${id}`;
+      return `This action removes a product with ID #${id}`;
+    } catch (error) {
+      console.error('Error removing product:', error);
+      throw new InternalServerErrorException('Error removing product');
+    }
   }
 }

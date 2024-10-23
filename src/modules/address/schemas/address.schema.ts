@@ -5,7 +5,7 @@ import { User } from '../../user/schemas/user.schema';
 
 export type AddressDocument = HydratedDocument<Address>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Address {
   @Prop({ required: true })
   name: string;
@@ -27,12 +27,7 @@ export class Address {
 
   @Prop({ required: true })
   detail: string;
-
-  @Prop({ default: Date.now })
-  created_at: Date;
-
-  @Prop({ default: Date.now })
-  updated_at: Date;
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);
+

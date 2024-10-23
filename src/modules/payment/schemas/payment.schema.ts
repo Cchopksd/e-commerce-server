@@ -9,7 +9,7 @@ export enum UserRole {
   GUEST = 'guest',
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class User {
   @Prop({ required: true })
   email: string;
@@ -39,12 +39,6 @@ export class User {
     required: true,
   })
   role: UserRole;
-
-  @Prop({ default: Date.now })
-  created_at: Date;
-
-  @Prop({ default: Date.now })
-  updated_at: Date;
 }
 
 // Create the schema

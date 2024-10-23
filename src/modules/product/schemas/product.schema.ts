@@ -8,7 +8,7 @@ class image {
   public_id: string;
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class Product {
   @Prop({ required: true })
   name: string;
@@ -33,12 +33,6 @@ export class Product {
 
   @Prop({ required: true })
   sale_out: number;
-
-  @Prop({ default: Date.now })
-  created_at: Date;
-
-  @Prop({ default: Date.now })
-  updated_at: Date;
 }
 
 // Create the schema
