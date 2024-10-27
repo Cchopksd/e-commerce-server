@@ -11,6 +11,7 @@ import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { validateObjectId } from 'src/helpers/objectIdHelper';
+import { shuffleItems } from 'src/utils/shuffleArray.util';
 
 @Injectable()
 export class ProductService {
@@ -51,18 +52,46 @@ export class ProductService {
     }
   }
 
-  async findAll(page: number, limit: number) {
+  async findAll(search: string, page: number, limit: number = 12) {
     try {
+      // Define query based on the search parameter
+      const query = search
+        ? {
+            $or: [
+              { name: { $regex: search, $options: 'i' } },
+              { description: { $regex: search, $options: 'i' } },
+            ],
+          }
+        : {};
+
+      // Calculate skip value for pagination
       const skip = (page - 1) * limit;
-      const product = await this.productModel
-        .find()
+
+      // Calculate total items matching the query
+      const totalItems = await this.productModel.countDocuments(query).exec();
+
+      // Calculate total pages
+      const totalPages = Math.ceil(totalItems / limit);
+
+      // Fetch products from the database
+      const products = await this.productModel
+        .find(query)
+        .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
         .exec();
-      return product;
+
+      const shuffleProducts = await shuffleItems(products);
+
+      return {
+        total_items: totalItems,
+        total_page: totalPages,
+        page_now: page,
+        items: shuffleProducts,
+      };
     } catch (error) {
-      console.error('Error fetch product:', error);
-      throw new InternalServerErrorException('Error fetching product');
+      console.error('Error fetching products:', error);
+      throw new InternalServerErrorException('Error fetching products');
     }
   }
 
@@ -92,7 +121,28 @@ export class ProductService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('Error fetching product');
+      throw new InternalServerErrorException({
+        message: 'Error fetching product',
+        statusCode: 500,
+      });
+    }
+  }
+
+  async getTrendingProduct() {
+    try {
+      // Fetch the top 4 products sorted by the 'sale_out' field in descending order
+      const trendingProducts = await this.productModel
+        .find()
+        .sort({ sale_out: -1 })
+        .limit(4);
+
+      return trendingProducts;
+    } catch (error) {
+      console.error('Error fetching trending products:', error);
+      throw new InternalServerErrorException({
+        message: 'Error fetching trending products',
+        statusCode: 500,
+      });
     }
   }
 

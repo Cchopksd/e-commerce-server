@@ -40,24 +40,24 @@ export class ProductController {
   @Public()
   @Get()
   async findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('search') search: string,
+    @Query('page') page: number,
   ) {
-    const items = await this.productService.findAll(page, limit);
-    const count = await this.productService.countPage();
+    const items = await this.productService.findAll(search, page);
 
-    return {
-      ...count,
-      page,
-      limit,
-      items,
-    };
+    return items;
   }
 
   @Public()
-  @Get(':id')
+  @Get('get-by-id/:id')
   findOne(@Param('id') id: string) {
     return this.productService.findOne(id);
+  }
+
+  @Public()
+  @Get('/trending-product')
+  getTrendingProduct() {
+    return this.productService.getTrendingProduct();
   }
 
   @Roles(Role.ADMIN)
