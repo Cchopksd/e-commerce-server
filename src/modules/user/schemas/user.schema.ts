@@ -11,6 +11,9 @@ export enum UserRole {
 
 @Schema({ timestamps: true })
 export class User {
+  @Prop()
+  profile_image: string;
+
   @Prop({ required: true })
   email: string;
 
