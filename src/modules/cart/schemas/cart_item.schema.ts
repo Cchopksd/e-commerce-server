@@ -8,6 +8,9 @@ export type CartItemDocument = HydratedDocument<CartItem>;
 
 @Schema({ timestamps: true })
 export class CartItem {
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Cart' })
+  cart_id: Cart;
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   user_id: User;
 

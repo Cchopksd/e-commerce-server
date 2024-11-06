@@ -57,6 +57,7 @@ export class CartService {
         await existingCartItem.save();
       } else {
         const newCartItem = await this.cartItemModel.create({
+          cart_id: cart._id,
           user_id: cart.user_id,
           product_id: createCartItemDto.product_id,
           quantity: createCartItemDto.quantity,
@@ -85,7 +86,9 @@ export class CartService {
     validateObjectId(user_id, 'User');
 
     try {
-      const cart = await this.cartItemModel.find({ user_id });
+      const cart = await this.cartItemModel
+        .find({ user_id })
+        .populate('product_id');
 
       return cart;
     } catch (error) {
@@ -96,7 +99,7 @@ export class CartService {
 
   update(id: number, updateCartDto: UpdateCartItemDto) {
     return `This action updates a #${id} cart`;
-  }
+  } 
 
   async removeFromCart(createCartItemDto: CreateCartItemDto) {
     validateObjectId(createCartItemDto.user_id, 'User');
@@ -118,20 +121,31 @@ export class CartService {
         throw new NotFoundException('Cart item not found');
       }
 
-      if (existingCartItem.quantity > 1) {
+      if (existingCartItem.quantity > 1 || cart.total_quantity > 1) {
         existingCartItem.quantity -= createCartItemDto.quantity;
         existingCartItem.subtotal =
           existingCartItem.unit_price * existingCartItem.quantity;
+        cart.total_price -= existingCartItem.unit_price;
+        cart.total_quantity -= createCartItemDto.quantity;
         await existingCartItem.save();
+        await cart.save();
       } else {
         await this.cartItemModel.deleteOne({
           user_id: createCartItemDto.user_id,
           product_id: createCartItemDto.product_id,
         });
+
+        await this.cartModel.deleteOne({
+          user_id: createCartItemDto.user_id,
+        });
         return {
           message: 'Item removed from cart',
         };
       }
+
+      cart.total_price +=
+        existingCartItem.unit_price * createCartItemDto.quantity;
+      cart.total_quantity += createCartItemDto.quantity;
 
       return {
         message: 'Item removed from cart',
