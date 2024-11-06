@@ -1,14 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import * as Omise from 'omise';
 import { ConfigService } from '@nestjs/config';
 
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 
+import { ItemDto } from './dto/source.dto';
+
+import { CartService } from '../cart/cart.service';
+import { CreateProductDto } from '../product/dto/create-product.dto';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { Payment, PaymentDocument } from './schemas/payment.schema';
+
 @Injectable()
 export class PaymentService {
   private omise: any;
-  constructor(private configService: ConfigService) {
+  constructor(
+    @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
+    private cartService: CartService,
+    private configService: ConfigService,
+  ) {
     this.omise = Omise({
       publicKey: this.configService.get<string>('OMISE_PUBLIC_KEY'),
       secretKey: this.configService.get<string>('OMISE_SECRET_KEY'),
@@ -16,8 +28,10 @@ export class PaymentService {
   }
 
   async createToken(createPaymentDto: any) {
+    const product = await this.cartService.getItemsOnCart(
+      createPaymentDto.user_id,
+    );
     const cardDetails = {
-      amount: createPaymentDto.amount,
       currency: createPaymentDto.currency,
       name: createPaymentDto.name,
       city: createPaymentDto.city,
@@ -36,8 +50,16 @@ export class PaymentService {
     }
 
     try {
+      const totalAmount = Math.floor(
+        product.reduce(
+          (sum, item) =>
+            sum +
+            (item.product_id.discount ?? item.product_id.price) * item.quantity,
+          0,
+        ),
+      );
       const charge = await this.omise.charges.create({
-        amount: createPaymentDto.amount * 100,
+        amount: totalAmount * 100,
         currency: createPaymentDto.currency,
         card: token.id,
       });
@@ -67,63 +89,123 @@ export class PaymentService {
   }
 
   async promptPay(createSourceDto: any) {
-    const charge = {
-      type: createSourceDto.type,
-      amount: createSourceDto.amount,
-      currency: createSourceDto.currency,
-      items: createSourceDto.items,
-      email: createSourceDto.email,
-    };
-    console.log(charge);
-    const sourceToken = await this.createSource(charge);
-    console.log(sourceToken);
-
-    if (!sourceToken || sourceToken.error) {
-      return {
-        message: 'Source creation failed',
-        error: sourceToken.error
-      };
-    }
-
-    const charges = {
-      type: createSourceDto.type,
-      amount: createSourceDto.amount,
-      currency: createSourceDto.currency,
-      items: sourceToken.items,
-      email: sourceToken.email,
-      source: sourceToken.id,
-      return_uri: this.configService.get<string>('REDIRECT_URI'),
-    };
-
     try {
-      const result = await this.omise.charges.create(charges);
-      // console.log('Charge created:', result);
+      // Get items from the cart
+      const product = await this.cartService.getItemsOnCart(
+        createSourceDto.user_id,
+      );
 
+      // Map product items to item DTOs
+      const itemDto = product.map((productItem) => {
+        const productDetails = productItem.product_id; // Assuming product_id contains the full product details
+        if (!productDetails) {
+          throw new Error('Product details not found for item in cart');
+        }
+
+        return {
+          name: productDetails.name,
+          amount: productDetails.discount
+            ? productDetails.discount * 100
+            : productDetails.price * 100,
+          quantity: productItem.quantity,
+          category: productDetails.category,
+        };
+      });
+
+      // Calculate total amount in THB
+      const totalAmount = Math.floor(
+        itemDto.reduce((sum, item) => sum + item.amount * item.quantity, 0),
+      );
+
+      // Prepare charge request
+      const charge = {
+        type: createSourceDto.type,
+        amount: totalAmount,
+        currency: createSourceDto.currency,
+        items: itemDto,
+        email: createSourceDto.email,
+      };
+
+      // Create the source
+      const sourceToken = await this.createSource(charge);
+
+      // Handle source creation failure
+      if (!sourceToken || sourceToken.error) {
+        return {
+          message: 'Source creation failed',
+          error: sourceToken.error,
+          statusCode: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      // Prepare charge parameters
+      const charges = {
+        type: sourceToken.type,
+        amount: sourceToken.amount,
+        currency: sourceToken.currency,
+        items: sourceToken.items,
+        email: sourceToken.email,
+        source: sourceToken.id,
+        return_uri: this.configService.get<string>('REDIRECT_URI'),
+      };
+
+      const omiseCharge = await this.omise.charges.create(charges);
+
+      await this.paymentModel.create({
+        charge_id: omiseCharge.id,
+        user_id: createSourceDto.user_id,
+        amount: omiseCharge?.source?.amount,
+        status: omiseCharge?.status,
+        payment_method: 'promptPay',
+      });
+      console.log();
       return {
-        chargeId: result.id,
-        image: result.source.scannable_code.image.download_uri,
-        amount: result.amount,
-        status: result.status,
-        items: result.source.items,
-        email: result.source.email,
-        return_uri: result.return_uri,
-        expires_at: result.expires_at,
-        net: result.net,
-        fee: result.fee,
-        fee_vat: result.fee_vat,
+        chargeId: omiseCharge.id,
+        image: omiseCharge?.source?.scannable_code?.image?.download_uri,
+        amount: omiseCharge?.source?.amount,
+        status: omiseCharge?.status,
+        return_uri: omiseCharge.return_uri,
+        expires_at: omiseCharge.expires_at,
       };
     } catch (error) {
-      console.error('Error creating charge:', error);
-      return { message: 'Payment failed', error: error.message };
+      console.error('Error in promptPay:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        return {
+          message: 'Payment failed',
+          error: error.response.data,
+          statusCode: error.response.status,
+        };
+      }
+
+      return {
+        message: 'Payment failed',
+        error: error.message,
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
     }
   }
 
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
+  async updatePaymentStatus(charge_id: string, status: string) {
+    return this.paymentModel.findOneAndUpdate(
+      { charge_id }, // The filter to find the document
+      { status }, // The update to apply
+      { new: true }, // Return the updated document
+    );
   }
 
-  findAll() {
-    return `This action returns all payment`;
+  async getListOfCharges() {
+    try {
+      const list = await this.omise.charges.list();
+      return list;
+    } catch (error) {
+      console.error('Error response:', error.response.data);
+      return {
+        message: 'Payment failed',
+        error: error.response.data,
+        statusCode: error.response.status,
+      };
+    }
   }
 
   findOne(id: number) {

@@ -12,10 +12,10 @@ import {
   ArrayMinSize,
 } from 'class-validator';
 
-class ItemDto {
+export class ItemDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  product_id: string;
 
   @IsNumber()
   @IsNotEmpty()
@@ -31,8 +31,9 @@ class ItemDto {
 }
 
 export class CreateSourceDto {
-  @IsPositive()
-  amount: number;
+  @IsString()
+  @IsNotEmpty()
+  user_id: string;
 
   @IsString()
   @IsNotEmpty()
@@ -45,10 +46,4 @@ export class CreateSourceDto {
   @IsEmail()
   @IsNotEmpty()
   email: string;
-
-  @IsArray()
-  @ArrayMinSize(1)
-  @ValidateNested({ each: true })
-  @Type(() => ItemDto)
-  items: ItemDto[];
 }

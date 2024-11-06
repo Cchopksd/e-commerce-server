@@ -1,45 +1,35 @@
+// payment.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument } from 'mongoose';
+import { Document } from 'mongoose';
 
-export type UserDocument = HydratedDocument<User>;
+export type PaymentDocument = Payment & Document;
 
-export enum UserRole {
-  ADMIN = 'admin',
-  USER = 'user',
-  GUEST = 'guest',
+export enum PaymentStatus {
+  PENDING = 'pending',
+  SUCCESSFUL = 'successful',
+  FAILED = 'failed',
+  EXPIRED = 'expired',
 }
 
 @Schema({ timestamps: true })
-export class User {
+export class Payment {
   @Prop({ required: true })
-  email: string;
+  charge_id: string;
 
   @Prop({ required: true })
-  password: string;
+  user_id: string;
 
   @Prop({ required: true })
-  username: string;
+  amount: number;
 
   @Prop({ required: true })
-  first_name: string;
+  status: string;
 
-  @Prop({ required: true })
-  last_name: string;
+  @Prop()
+  payment_method: string; // promptpay, installment, credit_card, truemoney
 
-  @Prop({ required: true })
-  phone: string;
-
-  @Prop({ required: true })
-  age: number;
-
-  @Prop({
-    type: String,
-    enum: UserRole,
-    default: UserRole.GUEST,
-    required: true,
-  })
-  role: UserRole;
+  @Prop()
+  paid_at?: Date;
 }
 
-// Create the schema
-export const UserSchema = SchemaFactory.createForClass(User);
+export const PaymentSchema = SchemaFactory.createForClass(Payment);

@@ -10,6 +10,8 @@ class image {
 
 @Schema({ timestamps: true })
 export class Product {
+  _id: string;
+
   @Prop({ required: true })
   name: string;
 

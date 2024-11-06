@@ -26,24 +26,19 @@ export class PaymentController {
   @Post('installment')
   async installment(@Body() createPaymentDto: CreatePaymentDto) {
     const token = await this.paymentService.createToken(createPaymentDto);
-    console.log(token);
     return token;
   }
 
   @Post('prompt-pay')
   async promptPay(@Body() createSourceDto: CreateSourceDto) {
     const result = await this.paymentService.promptPay(createSourceDto);
-
-    return {
-      message: 'create payment successful',
-      details: result,
-      statusCode: HttpStatus.CREATED,
-    };
+    return result;
   }
 
-  @Get()
+
+  @Get('get-list-of-charge')
   findAll() {
-    return this.paymentService.findAll();
+    return this.paymentService.getListOfCharges();
   }
 
   @Get(':id')

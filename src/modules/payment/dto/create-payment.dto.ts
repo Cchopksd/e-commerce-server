@@ -1,9 +1,16 @@
 // create-payment.dto.ts
-import { IsString, IsNumber, IsPositive, IsNotEmpty, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsPositive,
+  IsNotEmpty,
+  IsInt,
+} from 'class-validator';
 
 export class CreatePaymentDto {
-  @IsPositive()
-  amount: number;
+  @IsString()
+  @IsNotEmpty()
+  user_id: string;
 
   @IsString()
   @IsNotEmpty()
