@@ -12,6 +12,7 @@ import { CreateProductDto } from '../product/dto/create-product.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Payment, PaymentDocument } from './schemas/payment.schema';
+import { CreateCreditCardDto } from './dto/create-credit-card';
 
 @Injectable()
 export class PaymentService {
@@ -27,46 +28,69 @@ export class PaymentService {
     });
   }
 
-  async createToken(createPaymentDto: any) {
-    const product = await this.cartService.getItemsOnCart(
-      createPaymentDto.user_id,
-    );
-    const cardDetails = {
-      currency: createPaymentDto.currency,
-      name: createPaymentDto.name,
-      city: createPaymentDto.city,
-      country: createPaymentDto.country,
-      postal_code: createPaymentDto.postal_code,
-      number: createPaymentDto.number,
-      expiration_month: createPaymentDto.expiration_month,
-      expiration_year: createPaymentDto.expiration_year,
-      security_code: createPaymentDto.security_code,
-    };
-
-    const token = await this.omise.tokens.create({ card: cardDetails });
-
-    if (!token.id) {
-      throw new Error('Failed to create token');
-    }
-
+  async createToken(createPaymentDto: CreateCreditCardDto) {
     try {
-      const totalAmount = Math.floor(
-        product.reduce(
-          (sum, item) =>
-            sum +
-            (item.product_id.discount ?? item.product_id.price) * item.quantity,
-          0,
-        ),
-      );
-      const charge = await this.omise.charges.create({
-        amount: totalAmount * 100,
-        currency: createPaymentDto.currency,
-        card: token.id,
+      const cardDetails = {
+        currency: 'thb',
+        name: createPaymentDto.name,
+        city: createPaymentDto.city,
+        country: createPaymentDto.country,
+        postal_code: createPaymentDto.postal_code,
+        number: createPaymentDto.number,
+        expiration_month: createPaymentDto.expiration_month,
+        expiration_year: createPaymentDto.expiration_year,
+        security_code: createPaymentDto.security_code,
+      };
+
+      const token = await this.omise.tokens.create({ card: cardDetails });
+
+      if (!token.id) {
+        throw new Error('Failed to create token');
+      }
+      return token;
+    } catch (error) {
+      console.error('Error creating token:', error);
+      return { message: 'Token creation failed', error: error.message };
+    }
+    // try {
+    //   const totalAmount = Math.floor(
+    //     product.reduce(
+    //       (sum, item) =>
+    //         sum +
+    //         (item.product_id.discount ?? item.product_id.price) * item.quantity,
+    //       0,
+    //     ),
+    //   );
+    //   const charge = await this.omise.charges.create({
+    //     amount: totalAmount * 100,
+    //     currency: createPaymentDto.currency,
+    //     card: token.id,
+    //   });
+
+    //   return charge;
+    // } catch (error) {
+    //   return { message: 'Payment failed', error: error.message };
+    // }
+  }
+
+  async addCustomerAttachCreditCard(createCreditCardDto: CreateCreditCardDto) {
+    try {
+      const token = await this.createToken(createCreditCardDto);
+
+      const customer = await this.omise.customers.create({
+        description: `information about: ${createCreditCardDto.name}`,
+        email: createCreditCardDto.email,
+        token: token.id,
       });
 
-      return charge;
+      return {
+        message: 'customer has been created',
+        statusCode: HttpStatus.CREATED,
+        detail: customer,
+      };
     } catch (error) {
-      return { message: 'Payment failed', error: error.message };
+      console.error('Error creating customer:', error);
+      return { message: 'Customer creation failed', error: error.message };
     }
   }
 
@@ -77,9 +101,9 @@ export class PaymentService {
     }
   }
 
-  async createSource(charge: any) {
+  async createSource(source: any) {
     try {
-      const data = await this.omise.sources.create(charge);
+      const data = await this.omise.sources.create(source);
       // console.log('Source created:', data);
       return data;
     } catch (error) {
@@ -88,26 +112,40 @@ export class PaymentService {
     }
   }
 
+  async createCharge(charges: any) {
+    try {
+      const chargesData = await this.omise.charges.create(charges);
+      return chargesData;
+    } catch (error) {
+      console.error('Error creating charge:', error);
+      return { message: 'Charge creation failed', error: error.message };
+    }
+  }
+
   async promptPay(createSourceDto: any) {
     try {
       // Get items from the cart
-      const product = await this.cartService.getItemsOnCart(
+      const cartItem = await this.cartService.getItemsOnCart(
         createSourceDto.user_id,
       );
+      let cart_id: string = '';
 
+      if (cartItem.length <= 0) {
+        throw new Error('Cart is Empty');
+      }
       // Map product items to item DTOs
-      const itemDto = product.map((productItem) => {
-        const productDetails = productItem.product_id; // Assuming product_id contains the full product details
+      const itemDto = cartItem.map((product) => {
+        const productDetails = product.product_id; // Assuming product_id contains the full product details
         if (!productDetails) {
           throw new Error('Product details not found for item in cart');
         }
-
+        cart_id = product.cart_id.toString();
         return {
           name: productDetails.name,
           amount: productDetails.discount
             ? productDetails.discount * 100
             : productDetails.price * 100,
-          quantity: productItem.quantity,
+          quantity: product.quantity,
           category: productDetails.category,
         };
       });
@@ -127,45 +165,61 @@ export class PaymentService {
       };
 
       // Create the source
-      const sourceToken = await this.createSource(charge);
+      const chargeToken = await this.createSource(charge);
 
       // Handle source creation failure
-      if (!sourceToken || sourceToken.error) {
+      if (!chargeToken || chargeToken.error) {
         return {
-          message: 'Source creation failed',
-          error: sourceToken.error,
+          message: 'Charge creation failed',
+          error: chargeToken.error,
           statusCode: HttpStatus.BAD_REQUEST,
         };
       }
 
       // Prepare charge parameters
-      const charges = {
-        type: sourceToken.type,
-        amount: sourceToken.amount,
-        currency: sourceToken.currency,
-        items: sourceToken.items,
-        email: sourceToken.email,
-        source: sourceToken.id,
+      const promptPayData = {
+        type: chargeToken.type,
+        amount: chargeToken.amount,
+        currency: chargeToken.currency,
+        items: chargeToken.items,
+        email: chargeToken.email,
+        source: chargeToken.id,
         return_uri: this.configService.get<string>('REDIRECT_URI'),
       };
 
-      const omiseCharge = await this.omise.charges.create(charges);
+      const promptPay = await this.createCharge(promptPayData);
 
-      await this.paymentModel.create({
-        charge_id: omiseCharge.id,
+      const payment = await this.paymentModel.create({
+        charge_id: promptPay.id,
         user_id: createSourceDto.user_id,
-        amount: omiseCharge?.source?.amount,
-        status: omiseCharge?.status,
+        amount: promptPay?.source?.amount,
+        status: promptPay?.status,
         payment_method: 'promptPay',
+        expires_at: promptPay.expires_at,
       });
-      console.log();
+
+      if (!payment) {
+        throw new Error('Payment Model cant created');
+      }
+
+      const destroyCart = await this.cartService.destroyCart(cart_id);
+      console.log(cartItem);
+
+      if (destroyCart.statusCode !== 204) {
+        throw new Error('Can not to destroy cart');
+      }
+
       return {
-        chargeId: omiseCharge.id,
-        image: omiseCharge?.source?.scannable_code?.image?.download_uri,
-        amount: omiseCharge?.source?.amount,
-        status: omiseCharge?.status,
-        return_uri: omiseCharge.return_uri,
-        expires_at: omiseCharge.expires_at,
+        message: 'Payment has been created',
+        statusCode: HttpStatus.CREATED,
+        detail: {
+          chargeId: promptPay.id,
+          image: promptPay?.source?.scannable_code?.image?.download_uri,
+          amount: promptPay?.source?.amount,
+          status: promptPay?.status,
+          return_uri: promptPay.return_uri,
+          expires_at: promptPay.expires_at,
+        },
       };
     } catch (error) {
       console.error('Error in promptPay:', error);
@@ -177,7 +231,6 @@ export class PaymentService {
           statusCode: error.response.status,
         };
       }
-
       return {
         message: 'Payment failed',
         error: error.message,
@@ -187,11 +240,16 @@ export class PaymentService {
   }
 
   async updatePaymentStatus(charge_id: string, status: string) {
-    return this.paymentModel.findOneAndUpdate(
+    const updatePayment = await this.paymentModel.findOneAndUpdate(
       { charge_id }, // The filter to find the document
       { status }, // The update to apply
       { new: true }, // Return the updated document
     );
+    return {
+      message: 'Payment status has been updated',
+      statusCode: HttpStatus.OK,
+      detail: updatePayment,
+    };
   }
 
   async getListOfCharges() {

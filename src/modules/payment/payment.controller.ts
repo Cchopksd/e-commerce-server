@@ -12,29 +12,32 @@ import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CreateSourceDto } from './dto/source.dto';
+import { CreateCreditCardDto } from './dto/create-credit-card';
 
 @Controller('payment')
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  @Post('card')
-  async card(@Body() createPaymentDto: CreatePaymentDto) {
-    const token = await this.paymentService.createToken(createPaymentDto);
+  @Post('add-credit-card')
+  async card(@Body() createCreditCardDto: CreateCreditCardDto) {
+    const token =
+      await this.paymentService.addCustomerAttachCreditCard(
+        createCreditCardDto,
+      );
     return token;
   }
 
-  @Post('installment')
-  async installment(@Body() createPaymentDto: CreatePaymentDto) {
-    const token = await this.paymentService.createToken(createPaymentDto);
-    return token;
-  }
+  // @Post('installment')
+  // async installment(@Body() createPaymentDto: CreatePaymentDto) {
+  //   const token = await this.paymentService.createToken(createPaymentDto);
+  //   return token;
+  // }
 
   @Post('prompt-pay')
   async promptPay(@Body() createSourceDto: CreateSourceDto) {
     const result = await this.paymentService.promptPay(createSourceDto);
     return result;
   }
-
 
   @Get('get-list-of-charge')
   findAll() {

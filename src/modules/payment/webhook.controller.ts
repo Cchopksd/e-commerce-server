@@ -18,13 +18,13 @@ export class WebhookController {
           id,
           'paid',
         );
-        console.log(result);
+        return result;
       } else {
         const result = await this.paymentService.updatePaymentStatus(
           id,
           status,
         );
-        console.log(result);
+        return result;
       }
     }
     return { message: 'Webhook received' };

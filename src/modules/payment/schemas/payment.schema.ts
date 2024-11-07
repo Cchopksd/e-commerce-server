@@ -29,7 +29,7 @@ export class Payment {
   payment_method: string; // promptpay, installment, credit_card, truemoney
 
   @Prop()
-  paid_at?: Date;
+  expires_at?: Date;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
