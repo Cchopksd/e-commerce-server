@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post } from '@nestjs/common';
 import { OmiseWebhookDto } from './dto/omise-webhook.dto';
 import { PaymentService } from './payment.service';
 import { Public } from '../auth/decorator/auth.decorator';
@@ -10,23 +10,52 @@ export class WebhookController {
   @Public()
   @Post('omise')
   async handleOmiseWebhooks(@Body() webhookDTO: OmiseWebhookDto) {
-    const { key, data } = webhookDTO;
-    if (key === 'charge.complete') {
-      const { id, status } = data;
-      if (status === 'successful') {
-        const result = await this.paymentService.updatePaymentStatus(
-          id,
-          'paid',
-        );
-        return result;
-      } else {
-        const result = await this.paymentService.updatePaymentStatus(
+    console.log(webhookDTO);
+    try {
+      console.log('webhook omise is processing');
+      const { key, data } = webhookDTO;
+
+      if (key === 'charge.complete') {
+        const { id, status } = data;
+
+        const updatedPayment = await this.paymentService.updatePaymentStatus(
           id,
           status,
         );
-        return result;
+
+        return {
+          message: `Payment status updated to ${status}`,
+          paymentId: id,
+          updatedStatus: HttpStatus.OK,
+        };
       }
+
+      if (key === 'charge.failed') {
+        const { id, status } = data;
+
+        const updatedPayment = await this.paymentService.updatePaymentStatus(
+          id,
+          status,
+        );
+
+        return {
+          message: `Payment failed, status updated to ${status}`,
+          paymentId: id,
+          updatedStatus: HttpStatus.OK,
+        };
+      }
+      // Handle unexpected webhook keys
+      console.warn('Unhandled webhook key:', key);
+      return { message: 'Webhook received but not processed', key };
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      return {
+        message: 'An error occurred while processing the webhook',
+        error: error.message,
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    } finally {
+      console.log('webhook omise has processed');
     }
-    return { message: 'Webhook received' };
   }
 }

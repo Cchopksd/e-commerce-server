@@ -4,25 +4,35 @@ import {
   IsObject,
   IsEnum,
   ValidateNested,
-  IsOptional,
   IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+// Enum for Event Object
 enum EventObject {
   EVENT = 'event',
 }
 
-enum EventKey {
+// Enum for Event Keys (webhook event types)
+export enum EventKey {
   CHARGE_COMPLETE = 'charge.complete',
+  CHARGE_FAILED = 'charge.failed',
+  CHARGE_REFUNDED = 'charge.refunded',
+}
+
+// Enum for Charge Status
+export enum ChargeStatus {
+  SUCCESSFUL = 'successful',
+  FAILED = 'failed',
+  EXPIRE = 'expire',
 }
 
 export class OmiseChargeDataDto {
   @IsString()
   id: string;
 
-  @IsEnum(['successful', 'unsuccessful'])
-  status: string;
+  @IsEnum(ChargeStatus)
+  status: ChargeStatus;
 }
 
 export class OmiseWebhookDto {

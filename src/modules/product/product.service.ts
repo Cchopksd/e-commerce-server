@@ -146,11 +146,62 @@ export class ProductService {
     }
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
-    validateObjectId(id, 'Product');
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    session?: any,
+  ): Promise<Product> {
     const product = await this.productModel.findById(id);
-    return `This action updates a #${id} product`;
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    Object.assign(product, updateProductDto);
+
+    try {
+      const updatedProduct = await product.save({ session });
+
+      return updatedProduct;
+    } catch (error) {
+      console.error('Error updating product:', error);
+
+      throw new BadRequestException('Failed to update the product');
+    }
   }
+
+  // async update(
+  //   id: string,
+  //   updateProductDto: UpdateProductDto,
+  //   session?: any, // เพิ่ม parameter สำหรับ session
+  // ): Promise<Product> {
+  //   const product = await this.productModel.findById(id);
+
+  //   if (!product) {
+  //     throw new NotFoundException(`Product with ID ${id} not found`);
+  //   }
+
+  //   Object.assign(product, updateProductDto);
+
+  //   try {
+  //     // หากมี session ให้ใช้ session ในการทำการบันทึก
+  //     const updatedProduct = await product.save({ session });
+
+  //     // หากมี session ต้องทำการ commit ธุรกรรม
+  //     if (session) {
+  //       await session.commitTransaction();
+  //     }
+
+  //     return updatedProduct;
+  //   } catch (error) {
+  //     console.error('Error updating product:', error);
+  //     // หากมี session ต้องทำการ rollback ในกรณีที่เกิดข้อผิดพลาด
+  //     if (session) {
+  //       await session.abortTransaction();
+  //     }
+  //     throw new BadRequestException('Failed to update the product');
+  //   }
+  // }
 
   async remove(id: string) {
     validateObjectId(id, 'Product');

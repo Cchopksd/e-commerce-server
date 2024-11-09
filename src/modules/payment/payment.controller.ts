@@ -39,9 +39,9 @@ export class PaymentController {
     return result;
   }
 
-  @Get('get-list-of-charge')
-  findAll() {
-    return this.paymentService.getListOfCharges();
+  @Get('get-list-payment')
+  findAll(@Body() id: string, order: string) {
+    return this.paymentService.getListOfCharges(id, order);
   }
 
   @Get(':id')

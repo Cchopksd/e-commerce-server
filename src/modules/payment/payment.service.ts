@@ -1,6 +1,15 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import * as Omise from 'omise';
 import { ConfigService } from '@nestjs/config';
+import { InjectConnection } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
@@ -13,6 +22,9 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Payment, PaymentDocument } from './schemas/payment.schema';
 import { CreateCreditCardDto } from './dto/create-credit-card';
+import { ProductService } from '../product/product.service';
+import { OrderService } from '../order/order.service';
+import { OrderStatus } from '../order/enums/status';
 
 @Injectable()
 export class PaymentService {
@@ -20,7 +32,10 @@ export class PaymentService {
   constructor(
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     private cartService: CartService,
+    private productService: ProductService,
+    private orderService: OrderService,
     private configService: ConfigService,
+    @InjectConnection() private readonly connection: Connection,
   ) {
     this.omise = Omise({
       publicKey: this.configService.get<string>('OMISE_PUBLIC_KEY'),
@@ -123,39 +138,49 @@ export class PaymentService {
   }
 
   async promptPay(createSourceDto: any) {
+    const transactionSession = await this.connection.startSession();
+    transactionSession.startTransaction();
+    let cartId: string = '';
     try {
-      // Get items from the cart
-      const cartItem = await this.cartService.getItemsOnCart(
+      // Step 1: Get items from the cart
+      const cartItems = await this.cartService.getItemsOnCart(
         createSourceDto.user_id,
       );
-      let cart_id: string = '';
-
-      if (cartItem.length <= 0) {
-        throw new Error('Cart is Empty');
+      if (cartItems.length === 0) {
+        throw new BadRequestException('Cart is empty');
       }
-      // Map product items to item DTOs
-      const itemDto = cartItem.map((product) => {
-        const productDetails = product.product_id; // Assuming product_id contains the full product details
+
+      const itemDto = cartItems.map((product) => {
+        const productDetails = product.product_id; // Assuming this contains full product details
+
         if (!productDetails) {
-          throw new Error('Product details not found for item in cart');
+          throw new BadRequestException('Product not found for item in cart');
         }
-        cart_id = product.cart_id.toString();
+
+        if (product.quantity > productDetails.amount) {
+          throw new BadRequestException(
+            `Product "${productDetails.name}" exceeds available stock. Only ${productDetails.amount} left.`,
+          );
+        }
+
+        cartId = product.cart_id.toString();
         return {
           name: productDetails.name,
-          amount: productDetails.discount
-            ? productDetails.discount * 100
-            : productDetails.price * 100,
+          amount: productDetails.discount || productDetails.price,
           quantity: product.quantity,
           category: productDetails.category,
         };
       });
 
-      // Calculate total amount in THB
+      // Step 2: Calculate total amount
       const totalAmount = Math.floor(
-        itemDto.reduce((sum, item) => sum + item.amount * item.quantity, 0),
+        itemDto.reduce(
+          (sum, item) => sum + item.amount * 100 * item.quantity,
+          0,
+        ),
       );
 
-      // Prepare charge request
+      // Step 3: Prepare charge request
       const charge = {
         type: createSourceDto.type,
         amount: totalAmount,
@@ -164,19 +189,16 @@ export class PaymentService {
         email: createSourceDto.email,
       };
 
-      // Create the source
+      // Step 4: Create charge source
       const chargeToken = await this.createSource(charge);
-
-      // Handle source creation failure
       if (!chargeToken || chargeToken.error) {
-        return {
-          message: 'Charge creation failed',
-          error: chargeToken.error,
-          statusCode: HttpStatus.BAD_REQUEST,
-        };
+        throw new BadRequestException(
+          'Charge creation failed',
+          chargeToken.error,
+        );
       }
 
-      // Prepare charge parameters
+      // Step 5: Prepare promptPay charge data
       const promptPayData = {
         type: chargeToken.type,
         amount: chargeToken.amount,
@@ -189,26 +211,69 @@ export class PaymentService {
 
       const promptPay = await this.createCharge(promptPayData);
 
-      const payment = await this.paymentModel.create({
-        charge_id: promptPay.id,
-        user_id: createSourceDto.user_id,
-        amount: promptPay?.source?.amount,
-        status: promptPay?.status,
-        payment_method: 'promptPay',
-        expires_at: promptPay.expires_at,
-      });
+      // Step 6: Record the payment in the database
+      const payment = await this.paymentModel.create(
+        [
+          {
+            charge_id: promptPay.id,
+            user_id: createSourceDto.user_id,
+            amount: promptPay?.source?.amount,
+            status: promptPay?.status,
+            payment_method: 'promptPay',
+            expires_at: promptPay.expires_at,
+          },
+        ],
+        { session: transactionSession }, // Pass session explicitly here
+      );
 
       if (!payment) {
-        throw new Error('Payment Model cant created');
+        throw new Error('Failed to create payment record');
       }
 
-      const destroyCart = await this.cartService.destroyCart(cart_id);
-      console.log(cartItem);
-
-      if (destroyCart.statusCode !== 204) {
-        throw new Error('Can not to destroy cart');
+      // Step 7: Update product stock
+      for (const product of cartItems) {
+        const productDetails = product.product_id;
+        await this.productService.update(
+          productDetails._id,
+          {
+            amount: productDetails.amount - product.quantity,
+            sale_out: (productDetails.sale_out || 0) + product.quantity,
+          },
+          transactionSession,
+        );
       }
 
+      // Step 8: Create order
+      const prepareOrder = {
+        user_id: createSourceDto.user_id,
+        payment_id: payment[0]._id.toString(),
+        shipping_address: createSourceDto.address,
+        order_status: OrderStatus.Unpaid,
+        product_info: cartItems.map((item: any) => ({
+          product_id: item.product_id._id,
+          quantity: item.quantity,
+          price_at_purchase: item.product_id.discount ?? item.product_id.price,
+        })),
+      };
+
+      const createOrder = await this.orderService.createOrder(
+        prepareOrder,
+        transactionSession,
+      );
+
+      // Step 9: Destroy cart
+      const destroyCart = await this.cartService.destroyCart(
+        cartId,
+        transactionSession,
+      ); // Pass session here
+      if (destroyCart.statusCode !== HttpStatus.NO_CONTENT) {
+        throw new Error('Failed to clear cart');
+      }
+
+      // Step 10: Commit transaction
+      await transactionSession.commitTransaction();
+
+      // Step 12: Return payment details
       return {
         message: 'Payment has been created',
         statusCode: HttpStatus.CREATED,
@@ -222,39 +287,115 @@ export class PaymentService {
         },
       };
     } catch (error) {
-      console.error('Error in promptPay:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        return {
-          message: 'Payment failed',
-          error: error.response.data,
-          statusCode: error.response.status,
-        };
+      // Aborting transaction in case of error
+      if (transactionSession) {
+        await transactionSession.abortTransaction();
       }
-      return {
+      console.error('Error in promptPay:', error);
+
+      if (error) {
+        throw new HttpException(
+          {
+            message: error.response.message,
+            error: error.response.error,
+            statusCode: error.response.statusCode,
+          },
+          error.response.status,
+        );
+      }
+
+      throw new InternalServerErrorException({
         message: 'Payment failed',
         error: error.message,
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      });
+    } finally {
+      // Step 11: End session
+      await transactionSession.endSession();
     }
   }
 
   async updatePaymentStatus(charge_id: string, status: string) {
-    const updatePayment = await this.paymentModel.findOneAndUpdate(
-      { charge_id }, // The filter to find the document
-      { status }, // The update to apply
-      { new: true }, // Return the updated document
-    );
-    return {
-      message: 'Payment status has been updated',
-      statusCode: HttpStatus.OK,
-      detail: updatePayment,
-    };
+    const session = await this.paymentModel.startSession();
+    session.startTransaction();
+
+    try {
+      let updatedPayment;
+
+      // Handle order updates based on the payment status
+      if (status === 'successful') {
+        // Update the payment status
+        updatedPayment = await this.paymentModel.findOneAndUpdate(
+          { charge_id },
+          { status: OrderStatus.Paid },
+          { new: true },
+        );
+        if (!updatedPayment) {
+          throw new Error(`Payment with charge_id "${charge_id}" not found`);
+        }
+
+        await this.orderService.updateOrder({
+          payment_id: updatedPayment._id.toString(),
+          status: OrderStatus.Paid,
+        });
+      } else if (status === 'failed' || status === 'expired') {
+        updatedPayment = await this.paymentModel.findOneAndUpdate(
+          { charge_id },
+          { status: OrderStatus.Cancelled },
+          { new: true },
+        );
+
+        if (!updatedPayment) {
+          throw new Error(`Payment with charge_id "${charge_id}" not found`);
+        }
+
+        await this.orderService.updateOrder({
+          payment_id: updatedPayment._id.toString(),
+          status: OrderStatus.Cancelled,
+        });
+
+        console.warn(
+          `Payment with charge_id "${charge_id}" marked as ${status}.`,
+        );
+      }
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      return {
+        message: 'Payment status has been updated successfully',
+        statusCode: HttpStatus.OK,
+        detail: updatedPayment,
+      };
+    } catch (error) {
+      // Abort the transaction in case of error
+      await session.abortTransaction();
+      console.error('Error updating payment status:', error.message);
+
+      throw new InternalServerErrorException(
+        'Failed to update payment status',
+        error.message,
+      );
+    } finally {
+      // End the session
+      session.endSession();
+    }
   }
 
-  async getListOfCharges() {
+  async getListOfCharges(data: string, order: string) {
+    let orderField = '';
+    if (order === 'new') {
+      orderField = 'asc';
+    } else if (order === 'old') {
+      orderField = 'desc';
+    }
     try {
-      const list = await this.omise.charges.list();
+      const list = await this.omise.charges.list({
+        params: {
+          ...(data && { filter: data }),
+          order: orderField,
+        },
+      });
       return list;
     } catch (error) {
       console.error('Error response:', error.response.data);

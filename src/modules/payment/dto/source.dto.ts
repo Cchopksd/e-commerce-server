@@ -46,4 +46,8 @@ export class CreateSourceDto {
   @IsEmail()
   @IsNotEmpty()
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  address: string;
 }

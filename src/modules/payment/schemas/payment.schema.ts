@@ -23,7 +23,7 @@ export class Payment {
   amount: number;
 
   @Prop({ required: true })
-  status: string;
+  status: PaymentStatus;
 
   @Prop()
   payment_method: string; // promptpay, installment, credit_card, truemoney
