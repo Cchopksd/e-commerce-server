@@ -10,8 +10,8 @@ export class Address {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
-  user_info: User;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true })
+  user_id: User;
 
   @Prop({ required: true })
   province: string;
@@ -30,4 +30,3 @@ export class Address {
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);
-

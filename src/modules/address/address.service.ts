@@ -14,9 +14,10 @@ import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { UserService } from '../user/user.service';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { isValidObjectId, Model } from 'mongoose';
 import { Address, AddressDocument } from './schemas/address.schema';
 import { User, UserDocument } from '../user/schemas/user.schema';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class AddressService {
@@ -27,35 +28,44 @@ export class AddressService {
     private readonly userService: UserService,
   ) {}
 
-  async create(id: string, createAddressDto: CreateAddressDto) {
-    const getByID = await this.userService.findOne(id);
+  async create(createAddressDto: CreateAddressDto) {
+    const limit = await this.addressModel.find({
+      user_id: createAddressDto.user_id,
+    });
 
-    if (!getByID) {
-      return getByID;
+    const isDuplicate = limit.some(
+      (limit) => limit.name === createAddressDto.name,
+    );
+
+    if (isDuplicate) {
+      throw new ConflictException(
+        'Address name already exists. Please choose a different name.',
+      );
     }
-
-    const limit = await this.addressModel.find({ user_info: id });
 
     if (limit.length >= 3) {
       throw new ConflictException('You can only have up to 3 addresses.');
     }
 
-    const address = await this.addressModel.create({
-      user_info: id,
-      ...createAddressDto,
-    });
+    const address = await this.addressModel.create(createAddressDto);
 
     return address;
   }
 
-  findAll() {
-    return `This action returns all address`;
+  async getUserAddress(user_id: any) {
+    try {
+      const address = await this.addressModel.find(user_id)
+      return address;
+    } catch (error) {
+      console.error('Error fetching user address:', error);
+      throw error;
+    }
   }
 
   async findOne(id: string) {
     const userInfo = await this.addressModel.findById(id);
     if (!userInfo) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new NotFoundException(`Address with ID ${id} not found`);
     }
     return userInfo;
   }

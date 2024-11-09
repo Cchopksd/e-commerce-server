@@ -17,22 +17,18 @@ import { Public } from '../auth/decorator/auth.decorator';
 export class AddressController {
   constructor(private readonly addressService: AddressService) {}
 
-  @Post(':id')
-  async create(
-    @Param('id')
-    id: string,
-    @Body() createAddressDto: CreateAddressDto,
-  ) {
-    await this.addressService.create(id, createAddressDto);
+  @Post('')
+  async create(@Body() createAddressDto: CreateAddressDto) {
+    await this.addressService.create(createAddressDto);
     return {
       message: 'User created successfully',
       statusCode: HttpStatus.CREATED,
     };
   }
 
-  @Get()
-  findAll() {
-    return this.addressService.findAll();
+  @Get('get-user-address')
+  getUserAddress(@Body() user_id: string) {
+    return this.addressService.getUserAddress(user_id);
   }
 
   @Get(':id')
