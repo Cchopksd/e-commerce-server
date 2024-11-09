@@ -10,16 +10,6 @@ export type CartDocument = HydratedDocument<Cart>;
 export class Cart {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
   user_id: User;
-
-  @Prop({ required: true })
-  total_price: number;
-
-  @Prop({ required: true })
-  total_quantity: number;
-
-  @Prop({ required: true })
-  shipping_fee: number;
 }
 
-// Create the schema
 export const CartSchema = SchemaFactory.createForClass(Cart);

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -34,16 +35,17 @@ export class CartService {
         createCartItemDto.product_id,
       );
 
+      if (createCartItemDto.quantity > product.amount) {
+        throw new BadRequestException(
+          `Requested quantity of ${createCartItemDto.quantity} exceeds available stock of ${product.amount} for product "${product.name}".`,
+        );
+      }
+
       if (!cart) {
         cart = await this.cartModel.create({
           user_id: createCartItemDto.user_id,
-          total_price: 0,
-          shipping_fee: 0,
-          total_quantity: 0,
         });
       }
-
-      const actualProductPrice = product.discount || product.price;
 
       const existingCartItem = await this.cartItemModel.findOne({
         user_id: createCartItemDto.user_id,
@@ -51,23 +53,26 @@ export class CartService {
       });
 
       if (existingCartItem) {
-        existingCartItem.quantity += createCartItemDto.quantity;
-        existingCartItem.subtotal =
-          actualProductPrice * existingCartItem.quantity;
+        // ตรวจสอบว่า quantity รวมเกิน stock หรือไม่
+        const totalQuantity =
+          existingCartItem.quantity + createCartItemDto.quantity;
+        if (totalQuantity > product.amount) {
+          throw new BadRequestException(
+            `Cannot add ${product.name} to the cart. Only ${product.amount} are available in stock.`,
+          );
+        }
+
+        existingCartItem.quantity = totalQuantity;
         await existingCartItem.save();
       } else {
-        const newCartItem = await this.cartItemModel.create({
+        await this.cartItemModel.create({
           cart_id: cart._id,
           user_id: cart.user_id,
           product_id: createCartItemDto.product_id,
           quantity: createCartItemDto.quantity,
-          unit_price: actualProductPrice,
-          subtotal: actualProductPrice * createCartItemDto.quantity,
         });
       }
 
-      cart.total_price += actualProductPrice * createCartItemDto.quantity;
-      cart.total_quantity += createCartItemDto.quantity;
       await cart.save();
 
       return { cart };
@@ -99,7 +104,7 @@ export class CartService {
 
   update(id: number, updateCartDto: UpdateCartItemDto) {
     return `This action updates a #${id} cart`;
-  } 
+  }
 
   async removeFromCart(createCartItemDto: CreateCartItemDto) {
     validateObjectId(createCartItemDto.user_id, 'User');
@@ -121,12 +126,8 @@ export class CartService {
         throw new NotFoundException('Cart item not found');
       }
 
-      if (existingCartItem.quantity > 1 || cart.total_quantity > 1) {
+      if (existingCartItem.quantity > 1) {
         existingCartItem.quantity -= createCartItemDto.quantity;
-        existingCartItem.subtotal =
-          existingCartItem.unit_price * existingCartItem.quantity;
-        cart.total_price -= existingCartItem.unit_price;
-        cart.total_quantity -= createCartItemDto.quantity;
         await existingCartItem.save();
         await cart.save();
       } else {
@@ -143,10 +144,6 @@ export class CartService {
         };
       }
 
-      cart.total_price +=
-        existingCartItem.unit_price * createCartItemDto.quantity;
-      cart.total_quantity += createCartItemDto.quantity;
-
       return {
         message: 'Item removed from cart',
         cart_item: existingCartItem,
@@ -161,6 +158,32 @@ export class CartService {
         throw error;
       }
       throw new InternalServerErrorException('Error removing item from cart');
+    }
+  }
+
+  async destroyCart(cart_id: string, session?: any) {
+    validateObjectId(cart_id, 'User');
+
+    try {
+      // ลบสินค้าทั้งหมดในตะกร้า โดยใช้ session ถ้ามี
+      const cartItem = await this.cartItemModel.deleteMany(
+        { cart_id },
+        session ? { session } : {}, // ใช้ session ถ้ามี
+      );
+
+      // ลบตะกร้าเอง โดยใช้ session ถ้ามี
+      const cart = await this.cartModel.deleteMany(
+        { _id: cart_id },
+        session ? { session } : {}, // ใช้ session ถ้ามี
+      );
+
+      return {
+        message: 'Cart has been destroyed',
+        statusCode: HttpStatus.NO_CONTENT,
+      };
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      throw new InternalServerErrorException('Error fetching cart');
     }
   }
 }

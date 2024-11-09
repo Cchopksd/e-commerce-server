@@ -19,12 +19,6 @@ export class CartItem {
 
   @Prop({ required: true })
   quantity: number;
-
-  @Prop({ required: true })
-  unit_price: number;
-
-  @Prop({ required: true })
-  subtotal: number;
 }
 
 // Create the schema
