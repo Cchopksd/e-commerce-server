@@ -134,7 +134,7 @@ export class ProductService {
       const trendingProducts = await this.productModel
         .find()
         .sort({ sale_out: -1 })
-        .limit(4);
+        .limit(8);
 
       return trendingProducts;
     } catch (error) {
