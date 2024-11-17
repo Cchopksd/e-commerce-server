@@ -40,7 +40,7 @@ export class UserService {
     return this.userModel.find().exec();
   }
 
-  async findOne(id: string): Promise<User> {
+  async findOne(id: string) {
     if (!/^[0-9a-fA-F]{24}$/.test(id)) {
       throw new BadRequestException({
         message: 'Invalid user ID format',
