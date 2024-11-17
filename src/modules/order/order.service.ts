@@ -1,11 +1,13 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ProductService } from '../product/product.service';
 import { CreateOrderDto } from './dto/order.dto';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Order, OrderDocument } from './schema/order.schema';
 import { CreateOrderItemsDTO } from './dto/orderItems.dto';
@@ -73,8 +75,6 @@ export class OrderService {
   }
 
   async updateOrder(updateOrderDto: UpdateOrderItemsDTO) {
-    console.log(updateOrderDto, 'chopper2');
-
     try {
       const order = this.orderModel
         .findOneAndUpdate(
@@ -93,6 +93,50 @@ export class OrderService {
     } catch (error) {
       console.log(error);
       throw new error(error);
+    }
+  }
+
+  async getUserOrder(user_id: string, order_status: string) {
+    try {
+      const orders = await this.orderModel
+        .find({
+          user_id: user_id,
+          status: { $in: order_status },
+        })
+        .exec();
+
+      const orderItems = await this.orderItemsModel
+        .find({
+          order_id: { $in: orders.map((order) => order._id) },
+        })
+        .populate('order_id')
+        .populate('product_id')
+        .exec();
+
+      if (!orders || orders.length === 0) {
+        return {
+          message: 'No orders found for the given user and status',
+          statusCode: HttpStatus.NOT_FOUND,
+          detail: [],
+        };
+      }
+
+      return {
+        message: 'Operation processed successfully',
+        statusCode: HttpStatus.OK,
+        detail: orderItems,
+      };
+    } catch (error) {
+      console.error('Error in getUserOrder:', error);
+
+      // Handle generic MongoDB or internal errors
+      if (error instanceof Error) {
+        throw new InternalServerErrorException({
+          message: 'Get order failed',
+          error: error.message,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
     }
   }
 }
