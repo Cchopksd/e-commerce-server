@@ -12,7 +12,8 @@ import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CreateSourceDto } from './dto/source.dto';
-import { CreateCreditCardDto } from './dto/create-credit-card';
+import { CreateCreditCardDto } from './dto/create-credit-card.dto';
+import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -39,9 +40,24 @@ export class PaymentController {
     return result;
   }
 
+  @Post('credit-card')
+  async creditCard(
+    @Body() createPayWithCreditCardDto: CreatePayWithCreditCardDto,
+  ) {
+    const result = await this.paymentService.creditCard(
+      createPayWithCreditCardDto,
+    );
+    return result;
+  }
+
   @Get('get-list-payment')
   findAll(@Body() id: string, order: string) {
     return this.paymentService.getListOfCharges(id, order);
+  }
+
+  @Get('get-retrieve-customer')
+  getRetrieveACustomer(@Body('user_id') user_id: string) {
+    return this.paymentService.getRetrieveACustomer(user_id);
   }
 
   @Get(':id')

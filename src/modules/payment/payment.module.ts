@@ -9,14 +9,18 @@ import { WebhookController } from './webhook.controller';
 import { ProductModule } from '../product/product.module';
 import { OrderModule } from '../order/order.module';
 import { Connection } from 'mongoose';
+import { Card, CardSchema } from './schemas/card.schema';
+import { AddressModule } from '../address/address.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Payment.name, schema: PaymentSchema }]),
+    MongooseModule.forFeature([{ name: Card.name, schema: CardSchema }]),
     ConfigModule,
     CartModule,
     ProductModule,
     OrderModule,
+    AddressModule,
   ],
   controllers: [PaymentController, WebhookController],
   providers: [PaymentService],

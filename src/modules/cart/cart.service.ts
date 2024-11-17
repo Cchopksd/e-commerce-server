@@ -93,16 +93,9 @@ export class CartService {
     validateObjectId(user_id, 'User');
 
     try {
-      let cart = await this.cartItemModel
+      const cart = await this.cartItemModel
         .find({ user_id })
         .populate('product_id');
-
-      const address = await this.addressService.getUserAddress(user_id);
-
-      const cartWithAddress = cart.map((item) => ({
-        ...item.toObject(),
-        address,
-      }));
 
       return cart;
     } catch (error) {
@@ -115,12 +108,15 @@ export class CartService {
     validateObjectId(user_id, 'User');
 
     try {
-      let cart = await this.cartItemModel
-        .find({ user_id })
-        .sort({ createdAt: -1 })
-        .populate('product_id');
-
-      const address = await this.addressService.getUserAddressOnCart(user_id);
+      const [cart, address] = await Promise.all([
+        this.cartItemModel
+          .find({ user_id })
+          .sort({ createdAt: -1 })
+          .populate('product_id'),
+        this.addressService
+          .getUserAddressOnCart(user_id)
+          .then((res) => res.populate('user_id')),
+      ]);
 
       return { cart, address };
     } catch (error) {
@@ -134,16 +130,20 @@ export class CartService {
   }
 
   async removeFromCart(createCartItemDto: CreateCartItemDto) {
+    // Validate IDs
     validateObjectId(createCartItemDto.user_id, 'User');
     validateObjectId(createCartItemDto.product_id, 'Product');
     try {
+      // Find the cart
       const cart = await this.cartModel.findOne({
         user_id: createCartItemDto.user_id,
       });
+
       if (!cart) {
         throw new NotFoundException('Cart not found');
       }
 
+      // Find the specific cart item
       const existingCartItem = await this.cartItemModel.findOne({
         user_id: createCartItemDto.user_id,
         product_id: createCartItemDto.product_id,
@@ -153,37 +153,37 @@ export class CartService {
         throw new NotFoundException('Cart item not found');
       }
 
-      if (existingCartItem.quantity > 1) {
+      // Update or remove cart item
+      if (existingCartItem.quantity > createCartItemDto.quantity) {
         existingCartItem.quantity -= createCartItemDto.quantity;
         await existingCartItem.save();
-        await cart.save();
       } else {
+        // Remove cart item
         await this.cartItemModel.deleteOne({
           user_id: createCartItemDto.user_id,
           product_id: createCartItemDto.product_id,
         });
-
-        await this.cartModel.deleteOne({
-          user_id: createCartItemDto.user_id,
-        });
-        return {
-          message: 'Item removed from cart',
-        };
       }
+
+      // Check if the cart is now empty
+      // const remainingItems = await this.cartItemModel.find({
+      //   user_id: createCartItemDto.user_id,
+      // });
 
       return {
         message: 'Item removed from cart',
-        cart_item: existingCartItem,
+        cart_item: existingCartItem.quantity > 0 ? existingCartItem : null,
       };
     } catch (error) {
       console.error('Error removing item from cart:', error);
-      if (error instanceof BadRequestException) {
+
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
 
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
       throw new InternalServerErrorException('Error removing item from cart');
     }
   }

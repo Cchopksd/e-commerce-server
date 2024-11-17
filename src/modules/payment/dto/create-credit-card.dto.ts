@@ -11,6 +11,10 @@ import {
 export class CreateCreditCardDto {
   @IsString()
   @IsNotEmpty()
+  user_id: string;
+
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
   @IsEmail()

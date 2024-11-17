@@ -17,9 +17,7 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Post('add-item')
-  addToCart(
-    @Body() createCartDto: CreateCartItemDto,
-  ) {
+  addToCart(@Body() createCartDto: CreateCartItemDto) {
     return this.cartService.addToCart(createCartDto);
   }
 
@@ -36,10 +34,8 @@ export class CartController {
     return this.cartService.update(+id, updateCartItemDto);
   }
 
-  @Delete('remove-item')
-  removeFromCart(
-    @Body() createCartDto: CreateCartItemDto,
-  ) {
+  @Post('remove-item')
+  removeFromCart(@Body() createCartDto: CreateCartItemDto) {
     return this.cartService.removeFromCart(createCartDto);
   }
 }

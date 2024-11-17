@@ -5,36 +5,39 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import * as Omise from 'omise';
 import { ConfigService } from '@nestjs/config';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Model, Connection } from 'mongoose';
 
+import { Payment, PaymentDocument } from './schemas/payment.schema';
+import { Card, CardDocument } from './schemas/card.schema';
+
+import { OrderStatus } from '../order/enums/status';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-
+import { CreateCreditCardDto } from './dto/create-credit-card.dto';
 import { ItemDto } from './dto/source.dto';
 
 import { CartService } from '../cart/cart.service';
-import { CreateProductDto } from '../product/dto/create-product.dto';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import { Payment, PaymentDocument } from './schemas/payment.schema';
-import { CreateCreditCardDto } from './dto/create-credit-card';
 import { ProductService } from '../product/product.service';
 import { OrderService } from '../order/order.service';
-import { OrderStatus } from '../order/enums/status';
+import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
+import { AddressService } from '../address/address.service';
 
 @Injectable()
 export class PaymentService {
   private omise: any;
   constructor(
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
+    @InjectModel(Card.name) private cardModel: Model<CardDocument>,
     private cartService: CartService,
     private productService: ProductService,
     private orderService: OrderService,
     private configService: ConfigService,
+    private readonly addressService: AddressService,
     @InjectConnection() private readonly connection: Connection,
   ) {
     this.omise = Omise({
@@ -95,7 +98,12 @@ export class PaymentService {
       const customer = await this.omise.customers.create({
         description: `information about: ${createCreditCardDto.name}`,
         email: createCreditCardDto.email,
-        token: token.id,
+        card: token.id,
+      });
+
+      this.cardModel.create({
+        user_id: createCreditCardDto.user_id,
+        cust_id: customer.id,
       });
 
       return {
@@ -109,18 +117,51 @@ export class PaymentService {
     }
   }
 
-  async installment(card: any) {
+  async getRetrieveACustomer(user_id: string) {
     try {
+      const cust = await this.cardModel.findOne({ user_id });
+      if (!cust) {
+        throw new NotFoundException({
+          message: 'Customer not found',
+          statusCode: HttpStatus.NOT_FOUND,
+        });
+      }
+
+      const customer = await this.omise.customers.retrieve(cust.cust_id);
+
+      return {
+        message: 'Customer retrieved successfully',
+        statusCode: HttpStatus.OK,
+        detail: { customer_id: customer.id, card: customer.cards.data },
+      };
     } catch (error) {
-      return { message: 'Payment failed', error: error.message };
+      console.error('Error retrieving customer:', error);
+
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      if (error.code && error.message) {
+        throw new InternalServerErrorException({
+          message: 'Customer retrieval failed due to Omise API error',
+          error: error.message,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+
+      throw new InternalServerErrorException({
+        message: 'Customer retrieval failed due to an unexpected error',
+        error: error.message || 'Unknown error occurred',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
     }
   }
 
   async createSource(source: any) {
     try {
-      const data = await this.omise.sources.create(source);
+      const sources = await this.omise.sources.create(source);
       // console.log('Source created:', data);
-      return data;
+      return sources;
     } catch (error) {
       console.error('Error creating source:', error);
       return { message: 'Source creation failed', error: error.message };
@@ -134,6 +175,154 @@ export class PaymentService {
     } catch (error) {
       console.error('Error creating charge:', error);
       return { message: 'Charge creation failed', error: error.message };
+    }
+  }
+
+  async creditCard(createPayWithCreditCardDto: CreatePayWithCreditCardDto) {
+    try {
+      const transactionSession = await this.connection.startSession();
+      transactionSession.startTransaction();
+      let cartId: string = '';
+
+      const cartItems = await this.cartService.getItemsOnCart(
+        createPayWithCreditCardDto.user_id,
+      );
+      if (cartItems.length === 0) {
+        throw new BadRequestException('Cart is empty');
+      }
+
+      const item = cartItems.map((product) => {
+        const productDetails = product.product_id;
+
+        if (!productDetails) {
+          throw new BadRequestException('Product not found for item in cart');
+        }
+
+        if (product.quantity > productDetails.amount) {
+          throw new BadRequestException(
+            `Product "${productDetails.name}" exceeds available stock. Only ${productDetails.amount} left.`,
+          );
+        }
+
+        cartId = product.cart_id.toString();
+        return {
+          name: productDetails.name,
+          amount: productDetails.discount || productDetails.price,
+          quantity: product.quantity,
+          category: productDetails.category,
+        };
+      });
+
+      // Step 2: Calculate total amount
+      const totalAmount = Math.floor(
+        item.reduce((sum, item) => sum + item.amount * 100 * item.quantity, 0),
+      );
+
+      // Step 3: Create payment
+      const creditCard = await this.omise.charges.create({
+        amount: totalAmount,
+        currency: 'thb',
+        customer: createPayWithCreditCardDto.customer_id,
+        card: createPayWithCreditCardDto.card_id,
+      });
+
+      // Step 4: Update product stock
+      for (const product of cartItems) {
+        const productDetails = product.product_id;
+        await this.productService.update(
+          productDetails._id,
+          {
+            amount: productDetails.amount - product.quantity,
+            sale_out: (productDetails.sale_out || 0) + product.quantity,
+          },
+          transactionSession,
+        );
+      }
+
+      // Step 6: Record the payment in the database
+      const payment = await this.paymentModel.create(
+        [
+          {
+            charge_id: creditCard.id,
+            user_id: createPayWithCreditCardDto.user_id,
+            amount: creditCard?.amount,
+            status: creditCard?.status,
+            payment_method: 'creditCard',
+            expires_at: creditCard.expires_at,
+          },
+        ],
+        { session: transactionSession }, // Pass session explicitly here
+      );
+
+      // Step 8: Create order
+      const prepareOrder = {
+        user_id: createPayWithCreditCardDto.user_id,
+        payment_id: payment[0]._id.toString(),
+        shipping_address: createPayWithCreditCardDto.address_id,
+        order_status: OrderStatus.Paid,
+        product_info: cartItems.map((item: any) => ({
+          product_id: item.product_id._id,
+          quantity: item.quantity,
+          price_at_purchase: item.product_id.discount ?? item.product_id.price,
+        })),
+      };
+
+      const createOrder = await this.orderService.createOrder(
+        prepareOrder,
+        transactionSession,
+      );
+
+      // Step 9: Destroy cart
+      const destroyCart = await this.cartService.destroyCart(
+        cartId,
+        transactionSession,
+      );
+
+      if (destroyCart.statusCode !== HttpStatus.NO_CONTENT) {
+        throw new Error('Failed to clear cart');
+      }
+
+      // Step 10: Commit transaction
+      await transactionSession.commitTransaction();
+
+      return {
+        message: 'Payment has been created',
+        statusCode: HttpStatus.CREATED,
+        detail: {
+          chargeId: creditCard.id,
+          amount: creditCard?.amount,
+          status: creditCard?.status,
+          return_uri: creditCard.return_uri,
+          expires_at: creditCard.expires_at,
+        },
+      };
+    } catch (error) {
+      console.error('Error Pay with credit card:', error);
+
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      if (error.code && error.message) {
+        throw new InternalServerErrorException({
+          message: 'Credit card failed due to Omise API error',
+          error: error.message,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+
+      throw new InternalServerErrorException({
+        message: 'Credit card failed due to an unexpected error',
+        error: error.message || 'Unknown error occurred',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+
+  async installment(card: any) {
+    try {
+    } catch (error) {
+      return { message: 'Payment failed', error: error.message };
     }
   }
 
