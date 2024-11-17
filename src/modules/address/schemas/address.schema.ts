@@ -27,6 +27,9 @@ export class Address {
 
   @Prop({ required: true })
   detail: string;
+
+  @Prop({ required: true, default: false })
+  default: boolean;
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);

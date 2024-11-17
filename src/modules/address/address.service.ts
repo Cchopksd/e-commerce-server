@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
@@ -37,12 +38,6 @@ export class AddressService {
       (limit) => limit.name === createAddressDto.name,
     );
 
-    if (isDuplicate) {
-      throw new ConflictException(
-        'Address name already exists. Please choose a different name.',
-      );
-    }
-
     if (limit.length >= 3) {
       throw new ConflictException('You can only have up to 3 addresses.');
     }
@@ -52,9 +47,9 @@ export class AddressService {
     return address;
   }
 
-  async getUserAddress(user_id: any) {
+  async getUserAddress(user_id: string) {
     try {
-      const address = await this.addressModel.find(user_id)
+      const address = await this.addressModel.find({ user_id: user_id });
       return address;
     } catch (error) {
       console.error('Error fetching user address:', error);
@@ -62,10 +57,30 @@ export class AddressService {
     }
   }
 
-  async findOne(id: string) {
-    const userInfo = await this.addressModel.findById(id);
+  async getUserAddressOnCart(user_id: string) {
+    try {
+      const address = await this.addressModel.findOne({
+        user_id,
+        default: true,
+      });
+
+      if (!address) {
+        throw new Error('No default address found for the user');
+      }
+
+      return address;
+    } catch (error) {
+      console.error('Error fetching user address:', error);
+      throw new InternalServerErrorException('Error fetching user address');
+    }
+  }
+
+  async findOne(user_id: string) {
+    const userInfo = await this.addressModel.find({ user_id: user_id });
     if (!userInfo) {
-      throw new NotFoundException(`Address with ID ${id} not found`);
+      throw new NotFoundException(
+        `Address with User ID ${{ user_id: user_id }} not found`,
+      );
     }
     return userInfo;
   }

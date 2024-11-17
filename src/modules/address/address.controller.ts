@@ -26,14 +26,14 @@ export class AddressController {
     };
   }
 
-  @Get('get-user-address')
-  getUserAddress(@Body() user_id: string) {
+  @Get('get-address-by-user')
+  getUserAddress(@Body('user_id') user_id: string) {
     return this.addressService.getUserAddress(user_id);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.addressService.findOne(id);
+  findOne(@Body('user_id') user_id: string) {
+    return this.addressService.findOne(user_id);
   }
 
   @Patch(':id')

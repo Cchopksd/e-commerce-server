@@ -27,4 +27,7 @@ export class CreateAddressDto {
 
   @IsNotEmpty()
   detail: number;
+
+  @IsNotEmpty()
+  default: boolean;
 }
