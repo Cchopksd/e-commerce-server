@@ -5,10 +5,18 @@ import { BadRequestException } from '@nestjs/common';
  * @param id - The ID to validate.
  * @throws BadRequestException if the ID format is invalid.
  */
-export function validateObjectId(id: string,name:string): void {
-  if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+export function validateObjectId(id: string, fieldName: string): void {
+  if (!id || typeof id !== 'string') {
     throw new BadRequestException({
-      message: `Invalid ${name} ID format`,
+      message: `${fieldName} must be a non-empty string`,
+      statusCode: 400,
+    });
+  }
+
+  const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+  if (!objectIdRegex.test(id)) {
+    throw new BadRequestException({
+      message: `Invalid ${fieldName} ID format`,
       statusCode: 400,
     });
   }

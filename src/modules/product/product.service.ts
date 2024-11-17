@@ -104,7 +104,6 @@ export class ProductService {
   }
 
   async findOne(id: string) {
-    // Validate the ObjectId format
     validateObjectId(id, 'Product');
 
     try {
@@ -118,9 +117,13 @@ export class ProductService {
       return product;
     } catch (error) {
       console.error('Error fetching product:', error);
+
+      // Re-throw known exceptions
       if (error instanceof BadRequestException) {
         throw error;
       }
+
+      // Handle unexpected exceptions
       throw new InternalServerErrorException({
         message: 'Error fetching product',
         statusCode: 500,

@@ -13,6 +13,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { ProductModule } from './modules/product/product.module';
 import { HealthModule } from './modules/health/health.module';
 import { CartModule } from './modules/cart/cart.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CartModule } from './modules/cart/cart.module';
     ProductModule,
     PaymentModule,
     CartModule,
+    ReviewModule,
     HealthModule,
   ],
   controllers: [AppController],

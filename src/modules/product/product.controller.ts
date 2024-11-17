@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -39,10 +40,7 @@ export class ProductController {
 
   @Public()
   @Get()
-  async findAll(
-    @Query('search') search: string,
-    @Query('page') page: number,
-  ) {
+  async findAll(@Query('search') search: string, @Query('page') page: number) {
     const items = await this.productService.findAll(search, page);
 
     return items;
@@ -50,8 +48,21 @@ export class ProductController {
 
   @Public()
   @Get('get-by-id/:id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
+  async findOne(@Param('id') id: string) {
+    try {
+      return await this.productService.findOne(id);
+    } catch (error) {
+      console.error('Error in ProductController.findOne:', error);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException({
+        message: 'An unexpected error occurred while fetching the product',
+        statusCode: 400,
+      });
+    }
   }
 
   @Public()
