@@ -15,11 +15,13 @@ import { Cart, CartDocument } from './schemas/cart.schema';
 import { CartItem, CartItemDocument } from './schemas/cart_item.schema';
 import { ProductService } from '../product/product.service';
 import { validateObjectId } from 'src/helpers/objectIdHelper';
+import { AddressService } from '../address/address.service';
 
 @Injectable()
 export class CartService {
   constructor(
-    private productService: ProductService,
+    private readonly productService: ProductService,
+    private readonly addressService: AddressService,
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(CartItem.name) private cartItemModel: Model<CartItemDocument>,
   ) {}
@@ -91,11 +93,36 @@ export class CartService {
     validateObjectId(user_id, 'User');
 
     try {
-      const cart = await this.cartItemModel
+      let cart = await this.cartItemModel
         .find({ user_id })
         .populate('product_id');
 
+      const address = await this.addressService.getUserAddress(user_id);
+
+      const cartWithAddress = cart.map((item) => ({
+        ...item.toObject(),
+        address,
+      }));
+
       return cart;
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      throw new InternalServerErrorException('Error fetching cart');
+    }
+  }
+
+  async getItemsOnCart2(user_id: string) {
+    validateObjectId(user_id, 'User');
+
+    try {
+      let cart = await this.cartItemModel
+        .find({ user_id })
+        .sort({ createdAt: -1 })
+        .populate('product_id');
+
+      const address = await this.addressService.getUserAddressOnCart(user_id);
+
+      return { cart, address };
     } catch (error) {
       console.error('Error fetching cart:', error);
       throw new InternalServerErrorException('Error fetching cart');

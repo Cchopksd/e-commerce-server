@@ -25,7 +25,7 @@ export class CartController {
 
   @Get(':user_id')
   getItemsOnCart(@Param('user_id') id: string) {
-    return this.cartService.getItemsOnCart(id);
+    return this.cartService.getItemsOnCart2(id);
   }
 
   @Patch(':id')
