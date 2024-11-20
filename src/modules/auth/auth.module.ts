@@ -17,7 +17,7 @@ import { RolesGuard } from './roles.guard';
       useFactory: (configService: ConfigService) => ({
         global: true,
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' },
+        signOptions: { expiresIn: '15s' },
       }),
       inject: [ConfigService],
     }),
@@ -28,7 +28,7 @@ import { RolesGuard } from './roles.guard';
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
-    },
+    }, 
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
