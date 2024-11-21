@@ -9,6 +9,22 @@ import { UserService } from '../user/user.service';
 import { verifyPassword } from 'src/utils/password.util';
 import { ConfigService } from '@nestjs/config';
 
+const AUTH_ERROR_MESSAGES = {
+  EMAIL_REQUIRED: 'Email is required',
+  PASSWORD_REQUIRED: 'Password is required',
+  INVALID_CREDENTIALS: 'Email or password is incorrect',
+  INVALID_ACCESS_TOKEN: 'Invalid access token',
+  INVALID_REFRESH_TOKEN: 'Invalid refresh token',
+} as const;
+
+interface TokenPayload {
+  sub: string;
+  profile_image: string;
+  email: string;
+  username: string;
+  role: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -22,27 +38,21 @@ export class AuthService {
     pass: string,
   ): Promise<{ access_token: string; refresh_token: string }> {
     if (!email) {
-      throw new BadRequestException('Email is required');
+      throw new BadRequestException(AUTH_ERROR_MESSAGES.EMAIL_REQUIRED);
     }
     if (!pass) {
-      throw new BadRequestException('Password is required');
+      throw new BadRequestException(AUTH_ERROR_MESSAGES.PASSWORD_REQUIRED);
     }
 
     const user = await this.userService.findByEmail(email);
-    if (!user) {
+    if (!user || !(await verifyPassword(pass, user.password))) {
       throw new BadRequestException({
-        message: 'email or password is not match',
+        message: AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS,
         statusCode: 400,
       });
     }
-    const match = await verifyPassword(pass, user?.password);
-    if (!match) {
-      throw new BadRequestException({
-        message: 'email or password is not match',
-        statusCode: 400,
-      });
-    }
-    const payload = {
+
+    const payload: TokenPayload = {
       sub: user._id.toString(),
       profile_image: user.profile_image,
       email: user.email,
@@ -50,8 +60,10 @@ export class AuthService {
       role: user.role,
     };
 
-    const accessToken = await this.generateAccessToken(payload);
-    const refreshToken = await this.generateRefreshToken(payload);
+    const [accessToken, refreshToken] = await Promise.all([
+      this.generateAccessToken(payload),
+      this.generateRefreshToken(payload),
+    ]);
 
     return {
       access_token: accessToken,
@@ -60,28 +72,49 @@ export class AuthService {
   }
 
   async generateAccessToken(payload: any) {
-    return this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
-    });
-  }
+    try {
+      const secret = this.configService.get<string>('JWT_SECRET');
 
+      const token = this.jwtService.sign(payload, {
+        secret,
+      });
+
+      return token;
+    } catch (error) {
+      console.error('Error generating access token:', error);
+      throw new UnauthorizedException('Failed to generate access token');
+    }
+  }
   async generateRefreshToken(payload: any) {
-    return this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
-    });
+    try {
+      return this.jwtService.sign(payload, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      });
+    } catch (error) {
+      throw new UnauthorizedException('Failed to generate refresh token');
+    }
   }
 
   async validateAccessToken(token: string) {
-    return this.jwtService.verify(token, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-    });
+    try {
+      return await this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+    } catch (error) {
+      throw new UnauthorizedException(AUTH_ERROR_MESSAGES.INVALID_ACCESS_TOKEN);
+    }
   }
 
   async validateRefreshToken(token: string) {
-    return this.jwtService.verify(token, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-    });
+    try {
+      return await this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+    } catch (error) {
+      throw new UnauthorizedException(
+        AUTH_ERROR_MESSAGES.INVALID_REFRESH_TOKEN,
+      );
+    }
   }
 }

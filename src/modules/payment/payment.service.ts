@@ -67,7 +67,11 @@ export class PaymentService {
       }
       return token;
     } catch (error) {
-      console.error('Error creating token:', error);
+      console.error('Error creating token', {
+        error: error.message,
+        stack: error.stack,
+        context: 'PaymentService',
+      });
       return { message: 'Token creation failed', error: error.message };
     }
     // try {
@@ -594,6 +598,12 @@ export class PaymentService {
         statusCode: error.response.status,
       };
     }
+  }
+
+  private calculateTotalAmount(items: ItemDto[]): number {
+    return Math.floor(
+      items.reduce((sum, item) => sum + item.amount * 100 * item.quantity, 0),
+    );
   }
 
   findOne(id: number) {
