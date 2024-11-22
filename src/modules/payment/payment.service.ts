@@ -293,6 +293,7 @@ export class PaymentService {
         message: 'Payment has been created',
         statusCode: HttpStatus.CREATED,
         detail: {
+          order_id: createOrder._id,
           chargeId: creditCard.id,
           amount: creditCard?.amount,
           status: creditCard?.status,
@@ -471,6 +472,7 @@ export class PaymentService {
         message: 'Payment has been created',
         statusCode: HttpStatus.CREATED,
         detail: {
+          order_id: createOrder._id,
           chargeId: promptPay.id,
           image: promptPay?.source?.scannable_code?.image?.download_uri,
           amount: promptPay?.source?.amount,

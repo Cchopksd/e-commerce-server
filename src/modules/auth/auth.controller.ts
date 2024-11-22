@@ -6,15 +6,19 @@ import {
   HttpStatus,
   UseGuards,
   Get,
-  Request,
+  UnauthorizedException,
   Res,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
+import { Response } from 'express';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 import { Public } from './decorator/auth.decorator';
-import { Response } from 'express';
+/* The line `import { Response } from 'express';` is importing the `Response` type from the 'express'
+module in the TypeScript file. This allows the TypeScript code to use the `Response` type defined in
+the 'express' module for handling HTTP responses in the NestJS application. */
+// import { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -34,9 +38,10 @@ export class AuthController {
 
     res.cookie('refresh_token', refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
     });
 
     return {
@@ -48,9 +53,12 @@ export class AuthController {
 
   @Public()
   @Post('refresh-token')
-  async refresh(@Req() req: Request & { cookies: { [key: string]: string } }) {
+  async refresh(
+    @Req() req: Request & { cookies: { [key: string]: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const refresh_token = req.cookies?.refresh_token;
-
+    console.log(refresh_token);
     if (!refresh_token) {
       throw new UnauthorizedException('Refresh token not found in cookies');
     }
@@ -61,21 +69,28 @@ export class AuthController {
       const newAccessToken =
         await this.authService.generateAccessToken(payload);
 
+      res.cookie('refresh_token', refresh_token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN || undefined,
+      });
+
       return {
         message: 'Refresh token successfully',
         statusCode: HttpStatus.OK,
         access_token: newAccessToken,
       };
     } catch (error) {
-      throw new UnauthorizedException(
-        error?.message || 'Invalid or expired refresh token',
-      );
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 
   @UseGuards(AuthGuard)
   @Get('profile')
-  getProfile(@Request() req) {
+  getProfile(@Req() req: Request) {
     return req.user;
   }
 }

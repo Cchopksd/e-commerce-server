@@ -71,6 +71,8 @@ export class AuthService {
     };
   }
 
+  async signOut(refreshToken: string) {}
+
   async generateAccessToken(payload: any) {
     try {
       const secret = this.configService.get<string>('JWT_SECRET');
@@ -88,7 +90,7 @@ export class AuthService {
   async generateRefreshToken(payload: any) {
     try {
       return this.jwtService.sign(payload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: this.configService.get<string>('JWT_SECRET'),
         expiresIn: '7d',
       });
     } catch (error) {
@@ -109,7 +111,7 @@ export class AuthService {
   async validateRefreshToken(token: string) {
     try {
       return await this.jwtService.verify(token, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: this.configService.get<string>('JWT_SECRET'),
       });
     } catch (error) {
       throw new UnauthorizedException(
