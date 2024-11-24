@@ -2,15 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
+import * as morgan from 'morgan';
+
 import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
-
-  const allowedOrigins = ['http://127.0.0.1:3000', 'http://localhost:3000'];
+  app.use(morgan('dev'));
   app.enableCors({
-    origin: allowedOrigins,
+    origin: ['http://127.0.0.1:3000'],
     credentials: true,
   });
   app.use(helmet());
