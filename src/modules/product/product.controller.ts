@@ -47,10 +47,13 @@ export class ProductController {
   }
 
   @Public()
-  @Get('get-by-id/:id')
-  async findOne(@Param('id') id: string) {
+  @Post('by-id')
+  async findOneToDisplay(
+    @Body('product_id') product_id: string,
+    @Body('user_id') user_id: string,
+  ) {
     try {
-      return await this.productService.findOne(id);
+      return await this.productService.findOneDisplay({ product_id, user_id });
     } catch (error) {
       console.error('Error in ProductController.findOne:', error);
 
