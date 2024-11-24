@@ -30,30 +30,53 @@ export class AddressService {
   ) {}
 
   async create(createAddressDto: CreateAddressDto) {
-    const limit = await this.addressModel.find({
+    const addresses = await this.addressModel.find({
       user_id: createAddressDto.user_id,
     });
 
-    const isDuplicate = limit.some(
-      (limit) => limit.name === createAddressDto.name,
-    );
+    // const isDuplicate = addresses.some(
+    //   (address) => address.name === createAddressDto.name,
+    // );
 
-    if (limit.length >= 3) {
+    // if (isDuplicate) {
+    //   throw new ConflictException('Address name already exists');
+    // }
+
+    if (addresses.length >= 3) {
       throw new ConflictException('You can only have up to 3 addresses.');
     }
 
-    const address = await this.addressModel.create(createAddressDto);
+    if (createAddressDto.default) {
+      await this.addressModel.updateMany(
+        { user_id: createAddressDto.user_id },
+        { default: false },
+      );
+    }
 
-    return address;
+    return await this.addressModel.create(createAddressDto);
   }
 
   async getUserAddress(user_id: string) {
+    if (!isValidObjectId(user_id)) {
+      throw new BadRequestException('Invalid user ID');
+    }
+
     try {
-      const address = await this.addressModel.find({ user_id: user_id });
-      return address;
+      const addresses = await this.addressModel
+        .find({ user_id })
+        .sort({ default: -1, createdAt: -1 });
+
+      if (!addresses.length) {
+        throw new NotFoundException(`No addresses found for user ${user_id}`);
+      }
+
+      return addresses;
     } catch (error) {
-      console.error('Error fetching user address:', error);
-      throw error;
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error fetching user addresses:', error);
+      throw new InternalServerErrorException('Failed to fetch user addresses');
     }
   }
 
@@ -85,12 +108,39 @@ export class AddressService {
     return userInfo;
   }
 
-  update(id: number, updateAddressDto: UpdateAddressDto) {
-    return `This action updates a #${id} address`;
+  async update(id: string, updateAddressDto: UpdateAddressDto) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid address ID');
+    }
+
+    const address = await this.addressModel.findById(id);
+    if (!address) {
+      throw new NotFoundException('Address not found');
+    }
+
+    if (updateAddressDto.default) {
+      await this.addressModel.updateMany(
+        { user_id: address.user_id },
+        { default: false },
+      );
+    }
+
+    return await this.addressModel.findByIdAndUpdate(id, updateAddressDto, {
+      new: true,
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} address`;
+  async remove(id: string) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid address ID');
+    }
+
+    const address = await this.addressModel.findById(id);
+    if (!address) {
+      throw new NotFoundException('Address not found');
+    }
+
+    return await this.addressModel.findByIdAndDelete(id);
   }
 
   async getPostsWithUsers() {

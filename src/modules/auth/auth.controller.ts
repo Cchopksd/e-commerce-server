@@ -31,23 +31,22 @@ export class AuthController {
     @Body() signInDto: Record<string, any>,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { access_token, refresh_token } = await this.authService.signIn(
+    const { access_token } = await this.authService.signIn(
       signInDto.email,
       signInDto.password,
     );
 
-    res.cookie('refresh_token', refresh_token, {
+    res.cookie('refresh_token', access_token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000,
       path: '/',
     });
 
     return {
       message: 'Login successfully',
       statusCode: HttpStatus.OK,
-      access_token,
     };
   }
 
@@ -58,7 +57,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refresh_token = req.cookies?.refresh_token;
-    console.log(refresh_token);
     if (!refresh_token) {
       throw new UnauthorizedException('Refresh token not found in cookies');
     }
@@ -68,16 +66,6 @@ export class AuthController {
         await this.authService.validateRefreshToken(refresh_token);
       const newAccessToken =
         await this.authService.generateAccessToken(payload);
-
-      res.cookie('refresh_token', refresh_token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-        domain: process.env.COOKIE_DOMAIN || undefined,
-      });
-
       return {
         message: 'Refresh token successfully',
         statusCode: HttpStatus.OK,

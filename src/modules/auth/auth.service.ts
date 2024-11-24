@@ -33,10 +33,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signIn(
-    email: string,
-    pass: string,
-  ): Promise<{ access_token: string; refresh_token: string }> {
+  async signIn(email: string, pass: string): Promise<{ access_token: string }> {
     if (!email) {
       throw new BadRequestException(AUTH_ERROR_MESSAGES.EMAIL_REQUIRED);
     }
@@ -60,25 +57,21 @@ export class AuthService {
       role: user.role,
     };
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(payload),
-      this.generateRefreshToken(payload),
-    ]);
+    const refreshToken = await this.generateRefreshToken(payload);
 
     return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token: refreshToken,
     };
   }
 
-  async signOut(refreshToken: string) {}
-
-  async generateAccessToken(payload: any) {
+  async generateAccessToken(payload: TokenPayload) {
     try {
       const secret = this.configService.get<string>('JWT_SECRET');
+      const { exp, iat, ...newPayload } = payload as any;
 
-      const token = this.jwtService.sign(payload, {
+      const token = this.jwtService.sign(newPayload, {
         secret,
+        expiresIn: '15m',
       });
 
       return token;
@@ -87,6 +80,7 @@ export class AuthService {
       throw new UnauthorizedException('Failed to generate access token');
     }
   }
+
   async generateRefreshToken(payload: any) {
     try {
       return this.jwtService.sign(payload, {

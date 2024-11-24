@@ -26,8 +26,8 @@ export class AddressController {
     };
   }
 
-  @Get('get-address-by-user')
-  getUserAddress(@Body('user_id') user_id: string) {
+  @Get('get-address-by-user/:user_id')
+  getUserAddress(@Param('user_id') user_id: string) {
     return this.addressService.getUserAddress(user_id);
   }
 
@@ -38,11 +38,11 @@ export class AddressController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAddressDto: UpdateAddressDto) {
-    return this.addressService.update(+id, updateAddressDto);
+    return this.addressService.update(id, updateAddressDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.addressService.remove(+id);
+    return this.addressService.remove(id);
   }
 }
