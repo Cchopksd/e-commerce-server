@@ -9,6 +9,7 @@ export type OrderDocument = HydratedDocument<Order>;
 
 @Schema({ timestamps: true })
 export class Order {
+  _id: string;
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   user_id: User;
 

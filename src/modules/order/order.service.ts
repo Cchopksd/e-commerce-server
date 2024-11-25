@@ -14,6 +14,18 @@ import { CreateOrderItemsDTO } from './dto/orderItems.dto';
 import { AddressService } from '../address/address.service';
 import { OrderItems, OrderItemsDocument } from './schema/orderItems.schema';
 import { UpdateOrderItemsDTO } from './dto/updateOrder.dto';
+import { GetOrderDto } from './dto/getOrder.dto';
+
+interface OrderResponse {
+  message: string;
+  statusCode: number;
+  detail:
+    | {
+        orders: any[];
+        orderItems: any[];
+      }
+    | any[];
+}
 
 @Injectable()
 export class OrderService {
@@ -96,22 +108,22 @@ export class OrderService {
     }
   }
 
-  async getUserOrder(user_id: string, order_status: string) {
+  async getUserOrder(getOrderDto: GetOrderDto) {
     try {
-      const orders = await this.orderModel
-        .find({
-          user_id: user_id,
-          status: { $in: order_status },
-        })
-        .exec();
+      const query: any = { user_id: getOrderDto.user_id };
 
-      const orderItems = await this.orderItemsModel
-        .find({
-          order_id: { $in: orders.map((order) => order._id) },
-        })
-        .populate('order_id')
-        .populate('product_id')
-        .exec();
+      if (getOrderDto.order_status && getOrderDto.order_status !== 'all') {
+        query.status = getOrderDto.order_status;
+      }
+
+      let ordersQuery = this.orderModel.find(query);
+
+      ordersQuery = ordersQuery.populate({
+        path: 'shipping_address',
+        match: { status: 'delivered' },
+      });
+
+      const orders = await ordersQuery.exec();
 
       if (!orders || orders.length === 0) {
         return {
@@ -121,22 +133,41 @@ export class OrderService {
         };
       }
 
+      const orderItems = await this.orderItemsModel
+        .find({
+          order_id: { $in: orders.map((order) => order._id) },
+        })
+        .populate('product_id')
+        .exec();
+
+      const groupedOrders = orders.map((order) => {
+        const orderObj = order.toObject();
+        const items = orderItems.filter(
+          (item) => item.order_id._id.toString() === order._id.toString(),
+        );
+        return {
+          ...orderObj,
+          items,
+        };
+      });
+
       return {
         message: 'Operation processed successfully',
         statusCode: HttpStatus.OK,
-        detail: orderItems,
+        detail: groupedOrders,
       };
     } catch (error) {
       console.error('Error in getUserOrder:', error);
 
-      // Handle generic MongoDB or internal errors
-      if (error instanceof Error) {
-        throw new InternalServerErrorException({
-          message: 'Get order failed',
-          error: error.message,
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        });
+      if (error instanceof BadRequestException) {
+        throw error;
       }
+
+      throw new InternalServerErrorException({
+        message: 'Get order failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
     }
   }
 }

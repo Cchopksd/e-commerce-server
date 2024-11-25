@@ -7,6 +7,8 @@ export type OrderItemsDocument = HydratedDocument<OrderItems>;
 
 @Schema({ timestamps: true })
 export class OrderItems {
+  _id: string;
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Order' })
   order_id: Order;
 

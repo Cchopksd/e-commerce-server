@@ -185,7 +185,6 @@ export class ProductService {
 
   async getTrendingProduct() {
     try {
-      // Fetch the top 4 products sorted by the 'sale_out' field in descending order
       const trendingProducts = await this.productModel
         .find()
         .sort({ sale_out: -1 })
