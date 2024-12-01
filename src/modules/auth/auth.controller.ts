@@ -36,8 +36,8 @@ export class AuthController {
       signInDto.password,
     );
 
-    res.cookie('refresh_token', access_token, {
-      httpOnly: true,
+    res.cookie('access_token', access_token, {
+      httpOnly: false,
       sameSite: 'lax',
       secure: false,
       maxAge: 24 * 60 * 60 * 1000,
@@ -47,6 +47,7 @@ export class AuthController {
     return {
       message: 'Login successfully',
       statusCode: HttpStatus.OK,
+      access_token: access_token,
     };
   }
 
