@@ -14,6 +14,7 @@ import { validateObjectId } from 'src/helpers/objectIdHelper';
 import { shuffleItems } from 'src/utils/shuffleArray.util';
 import { FavoriteService } from '../favorite/favorite.service';
 import { ReviewService } from '../review/review.service';
+import { GetAllProductDto } from './dto/get-Product.dto';
 
 @Injectable()
 export class ProductService {
@@ -56,7 +57,10 @@ export class ProductService {
     }
   }
 
-  async findAll(search: string, page: number, limit: number = 12) {
+  async findAll(getAllProductDto: GetAllProductDto) {
+    const { search, page, user_id } = getAllProductDto;
+
+    const limit = 12;
     try {
       // Define query based on the search parameter
       const query = search
@@ -69,7 +73,7 @@ export class ProductService {
         : {};
 
       // Calculate skip value for pagination
-      const skip = (page - 1) * limit;
+      const skip = (Number(page) - 1) * limit;
 
       // Calculate total items matching the query
       const totalItems = await this.productModel.countDocuments(query).exec();
@@ -85,13 +89,24 @@ export class ProductService {
         .limit(limit)
         .exec();
 
-      const shuffleProducts = await shuffleItems(products);
+      const favoriteProducts =
+        await this.favoriteService.getFavoriteByUserAndProducts({
+          user_id,
+          product_ids: products.map((product) => product._id.toString()),
+        });
+
+      const productsWithFavorite = products.map((product) => ({
+        ...product.toObject(),
+        favorite: favoriteProducts.detail.find(
+          (f) => f.product_id === product._id.toString(),
+        )?.is_favorite,
+      }));
 
       return {
         total_items: totalItems,
         total_page: totalPages,
         page_now: page,
-        items: shuffleProducts,
+        items: productsWithFavorite,
       };
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -142,16 +157,15 @@ export class ProductService {
     product_id: string;
     user_id: string;
   }) {
-
     validateObjectId(product_id, 'Product');
 
     try {
       const [product, reviews, favorite] = await Promise.all([
         this.productModel.findById(product_id),
         this.reviewService.getByProduct(product_id),
-        this.favoriteService.getFavoriteByUserAndProduct({
+        this.favoriteService.getFavoriteByUserAndProducts({
           user_id,
-          product_id,
+          product_ids: [product_id],
         }),
       ]);
 
@@ -163,9 +177,13 @@ export class ProductService {
       }
 
       return {
-        product,
-        reviews: reviews,
-        favorite: favorite.detail,
+        message: 'Get product successfully',
+        statusCode: 200,
+        detail: {
+          product,
+          reviews,
+          favorite: favorite.detail[0].is_favorite,
+        },
       };
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -183,14 +201,29 @@ export class ProductService {
     }
   }
 
-  async getTrendingProduct() {
+  async getTrendingProduct({ user_id }: { user_id: string }) {
     try {
       const trendingProducts = await this.productModel
         .find()
         .sort({ sale_out: -1 })
         .limit(8);
 
-      return trendingProducts;
+      const favoriteProducts =
+        await this.favoriteService.getFavoriteByUserAndProducts({
+          user_id,
+          product_ids: trendingProducts.map((product) =>
+            product._id.toString(),
+          ),
+        });
+
+      const productsWithFavorite = trendingProducts.map((product) => ({
+        ...product.toObject(),
+        favorite: favoriteProducts.detail.find(
+          (f) => f.product_id === product._id.toString(),
+        )?.is_favorite,
+      }));
+
+      return productsWithFavorite;
     } catch (error) {
       console.error('Error fetching trending products:', error);
       throw new InternalServerErrorException({

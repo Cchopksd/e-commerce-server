@@ -22,6 +22,7 @@ import {
   FileInterceptor,
 } from '@nestjs/platform-express';
 import { ImageValidation } from 'src/pipes/ParseFilePipe.pipe';
+import { GetAllProductDto } from './dto/get-Product.dto';
 
 @Controller('product')
 export class ProductController {
@@ -40,16 +41,16 @@ export class ProductController {
 
   @Public()
   @Get()
-  async findAll(@Query('search') search: string, @Query('page') page: number) {
-    const items = await this.productService.findAll(search, page);
+  async findAll(@Query() getAllProductDto: GetAllProductDto) {
+    const items = await this.productService.findAll(getAllProductDto);
 
     return items;
   }
 
   @Public()
-  @Post('by-id')
+  @Post('by-id/:product_id')
   async findOneToDisplay(
-    @Body('product_id') product_id: string,
+    @Param('product_id') product_id: string,
     @Body('user_id') user_id: string,
   ) {
     try {
@@ -70,8 +71,8 @@ export class ProductController {
 
   @Public()
   @Get('/trending-product')
-  getTrendingProduct() {
-    return this.productService.getTrendingProduct();
+  getTrendingProduct(@Query('user_id') user_id: string) {
+    return this.productService.getTrendingProduct({ user_id });
   }
 
   @Roles(Role.ADMIN)
