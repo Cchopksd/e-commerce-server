@@ -32,7 +32,9 @@ export class FavoriteService {
 
   async getFavoriteByUser(user_id: string) {
     try {
-      const favorite = await this.favoriteModel.find({ user_id });
+      const favorite = await this.favoriteModel
+        .find({ user_id })
+        .populate('product_id');
       return {
         message: 'Favorite fetched successfully',
         statusCode: 200,
@@ -47,25 +49,31 @@ export class FavoriteService {
     }
   }
 
-  async getFavoriteByUserAndProduct({
-    product_id,
+
+  async getFavoriteByUserAndProducts({
+    product_ids,
     user_id,
   }: {
-    product_id: string;
+    product_ids: string[];
     user_id: string;
   }) {
     try {
-      const favorite = await this.favoriteModel
-        .findOne({
+      const favorites = await this.favoriteModel
+        .find({
           user_id,
-          product_id,
+          product_id: { $in: product_ids },
         })
-        .select('is_favorite');
-      
+        .select('product_id is_favorite');
+
       return {
-        message: 'Favorite fetched successfully',
+        message: 'Favorites fetched successfully',
         statusCode: 200,
-        detail: favorite ? favorite.is_favorite : false,
+        detail: product_ids.map((id) => ({
+          product_id: id,
+          is_favorite: favorites.some(
+            (f) => f.product_id.toString() === id && f.is_favorite,
+          ),
+        })),
       };
     } catch (error) {
       return {
