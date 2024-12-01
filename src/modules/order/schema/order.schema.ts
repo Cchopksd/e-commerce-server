@@ -4,6 +4,7 @@ import { Address } from 'src/modules/address/schemas/address.schema';
 import { User } from 'src/modules/user/schemas/user.schema';
 import { OrderStatus } from '../enums/status';
 import { Payment } from 'src/modules/payment/schemas/payment.schema';
+import { ShippingProvider } from '../enums/shipping-provider';
 
 export type OrderDocument = HydratedDocument<Order>;
 
@@ -27,11 +28,11 @@ export class Order {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Address' })
   shipping_address: Address;
 
-  @Prop()
-  shipping_provider?: string;
+  @Prop({ type: String, enum: ShippingProvider })
+  shipping_provider?: ShippingProvider;
 
-  @Prop()
-  Tracking_id?: string;
+  @Prop({ type: String })
+  tracking_id?: string;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

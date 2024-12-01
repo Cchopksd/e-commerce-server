@@ -9,9 +9,12 @@ import { Product, ProductSchema } from '../product/schemas/product.schema';
 import { ProductModule } from '../product/product.module';
 import { OrderItems, OrderItemsSchema } from './schema/orderItems.schema';
 import { AddressModule } from '../address/address.module';
+import { PaymentModule } from '../payment/payment.module';
+import { forwardRef, Inject } from '@nestjs/common';
 
 @Module({
   imports: [
+    forwardRef(() => PaymentModule),
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
     MongooseModule.forFeature([
       { name: OrderItems.name, schema: OrderItemsSchema },

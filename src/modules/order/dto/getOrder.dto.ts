@@ -5,6 +5,7 @@ import {
   IsNumber,
   Min,
   IsString,
+  IsOptional,
 } from 'class-validator';
 import { OrderStatus } from '../enums/status';
 
@@ -15,4 +16,16 @@ export class GetOrderDto {
 
   @IsEnum(OrderStatus)
   order_status: OrderStatus;
+
+  @IsNumber()
+  page: number;
+}
+
+export class GetAllOrderDto {
+  @IsEnum(OrderStatus)
+  order_status: OrderStatus;
+
+  @IsString()
+  @IsOptional()
+  page: string;
 }
