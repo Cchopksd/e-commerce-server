@@ -31,7 +31,7 @@ export class UserController {
   }
 
   @Roles(Role.ADMIN)
-  @Get()
+  @Get('get-all-user')
   findAll() {
     return this.userService.findAll();
   }
@@ -42,7 +42,14 @@ export class UserController {
     const user = this.userService.findOne(id);
     return user;
   }
-  
+
+  @Roles(Role.ADMIN)
+  @Get('user-detail/:id')
+  async findUserDetail(@Param('id') id: string) {
+    const user = this.userService.findUserDetail(id);
+    return user;
+  }
+
   @Public()
   @Get(':email')
   async findByEmail(@Param('email') email: string) {

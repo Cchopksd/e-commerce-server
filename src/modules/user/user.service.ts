@@ -16,7 +16,10 @@ import { Address, AddressDocument } from '../address/schemas/address.schema';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Address.name) private addressModel: Model<AddressDocument>,
+  ) {}
   async create(createUserDto: CreateUserDto) {
     const emailExist = await this.findByEmail(createUserDto.email);
     if (emailExist) {
@@ -36,8 +39,13 @@ export class UserService {
     return user;
   }
 
-  findAll() {
-    return this.userModel.find().exec();
+  async findAll() {
+    const users = await this.userModel.find().exec();
+    return {
+      message: 'Get all users successfully',
+      statusCode: HttpStatus.OK,
+      detail: users,
+    };
   }
 
   async findOne(id: string) {
@@ -52,6 +60,16 @@ export class UserService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
     return userInfo;
+  }
+
+  async findUserDetail(id: string) {
+    const user = await this.findOne(id);
+    const address = await this.addressModel.find({ user_id: id });
+    return {
+      message: 'Get user detail successfully',
+      statusCode: HttpStatus.OK,
+      detail: { user, address },
+    };
   }
 
   findByEmail(email: string): Promise<UserDocument | undefined> {

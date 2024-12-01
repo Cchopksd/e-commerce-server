@@ -4,6 +4,7 @@ import { UserController } from './user.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/modules/user/schemas/user.schema';
 import { Address, AddressSchema } from '../address/schemas/address.schema';
+import { AddressService } from '../address/address.service';
 
 @Module({
   imports: [
