@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule, InjectConnection } from '@nestjs/mongoose';
 import { PaymentService } from './payment.service';
 import { PaymentController } from './payment.controller';
@@ -19,10 +19,11 @@ import { AddressModule } from '../address/address.module';
     ConfigModule,
     CartModule,
     ProductModule,
-    OrderModule,
+    forwardRef(() => OrderModule),
     AddressModule,
   ],
   controllers: [PaymentController, WebhookController],
   providers: [PaymentService],
+  exports: [PaymentService],
 })
 export class PaymentModule {}

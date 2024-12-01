@@ -60,9 +60,9 @@ export class PaymentController {
     return this.paymentService.getRetrieveACustomer(user_id);
   }
 
-  @Get(':id')
+  @Get('charge/:id')
   findOne(@Param('id') id: string) {
-    return this.paymentService.findOne(+id);
+    return this.paymentService.findOneByChargeId(id);
   }
 
   @Patch(':id')

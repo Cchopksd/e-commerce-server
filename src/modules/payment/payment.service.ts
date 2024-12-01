@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  forwardRef,
   HttpException,
   HttpStatus,
   Inject,
@@ -35,6 +36,7 @@ export class PaymentService {
     @InjectModel(Card.name) private cardModel: Model<CardDocument>,
     private cartService: CartService,
     private productService: ProductService,
+    @Inject(forwardRef(() => OrderService))
     private orderService: OrderService,
     private configService: ConfigService,
     private readonly addressService: AddressService,
@@ -608,8 +610,9 @@ export class PaymentService {
     );
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
+  async findOneByChargeId(charge_id: string) {
+    const charge = await this.omise.charges.retrieve(charge_id);
+    return charge;
   }
 
   update(id: number, updatePaymentDto: UpdatePaymentDto) {
