@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  nestjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestjs-app
+    environment:
+      - MONGODB_URI=${MONGODB_URI}    
+      - JWT_SECRET=${JWT_SECRET}       
+      - PORT=${PORT}                    
+      - NODE_ENV=${NODE_ENV}             
+      - LIVE_MODE=${LIVE_MODE}           
+      - OMISE_PUBLIC_KEY=${OMISE_PUBLIC_KEY}   
+      - OMISE_SECRET_KEY=${OMISE_SECRET_KEY}  
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}  
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY} 
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}  
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}  
+    ports:
+      - "5500:5500" 
+    depends_on:
+      - mongodb 
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    restart: always
+
+volumes:
+  mongo-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
