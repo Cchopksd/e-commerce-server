@@ -7,18 +7,20 @@ import {
 } from '@nestjs/common';
 
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto, UpdateUserPasswordDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from 'src/modules/user/schemas/user.schema';
 import { Model } from 'mongoose';
-import { hashPassword } from 'src/utils/password.util';
+import { hashPassword, verifyPassword } from 'src/utils/password.util';
 import { Address, AddressDocument } from '../address/schemas/address.schema';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Address.name) private addressModel: Model<AddressDocument>,
+    private cloudinaryService: CloudinaryService,
   ) {}
   async create(createUserDto: CreateUserDto) {
     const emailExist = await this.findByEmail(createUserDto.email);
@@ -80,8 +82,106 @@ export class UserService {
     return user;
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(
+    user_id: string,
+    updateUserDto: UpdateUserDto,
+    files: { images?: Express.Multer.File },
+  ) {
+    try {
+      Number(updateUserDto.age);
+
+      const user = await this.userModel.findById({ _id: user_id });
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      if (user.profile_image && user.profile_image.length > 0) {
+        const { result } = await this.cloudinaryService.deleteImage(
+          user.profile_image[0].public_id,
+        );
+        if (!result) {
+          throw new Error('Failed to delete old profile image');
+        }
+      }
+
+      let image = null;
+      if (files?.images) {
+        image = await this.cloudinaryService.uploadImage(
+          files.images[0],
+          'profiles',
+        );
+      }
+
+      const updateUser = await this.userModel.updateOne(
+        { _id: new Object(user_id) },
+        {
+          $set: {
+            ...updateUserDto,
+            profile_image: image ? [image] : user.profile_image,
+          },
+        },
+      );
+
+      if (updateUser.modifiedCount === 0) {
+        throw new BadRequestException('Failed to update user information');
+      }
+
+      return {
+        message: 'User information updated successfully',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.error(error);
+      throw new Error('Failed to update user');
+    }
+  }
+
+  async updatePassword(
+    user_id: string,
+    updateUserPasswordDto: UpdateUserPasswordDto,
+  ) {
+    try {
+      const user = await this.userModel.findById({ _id: new Object(user_id) });
+
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      const matched = await verifyPassword(
+        updateUserPasswordDto.old_password,
+        user.password,
+      );
+
+      if (!matched) {
+        throw new BadRequestException('Old password is incorrect');
+      }
+
+      const hashedPassword = await hashPassword(
+        updateUserPasswordDto.new_password,
+      );
+
+      const updateUserPassword = await this.userModel.updateOne(
+        { _id: new Object(user_id) },
+        {
+          $set: { password: hashedPassword },
+        },
+      );
+
+      if (updateUserPassword.modifiedCount === 0) {
+        throw new BadRequestException('Failed to update password');
+      }
+
+      return {
+        message: 'Password updated successfully',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.error(error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error('Failed to update user password');
+    }
   }
 
   async remove(id: string) {

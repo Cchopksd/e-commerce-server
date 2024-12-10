@@ -4,6 +4,7 @@ import {
   IsArray,
   IsNumber,
   ValidateNested,
+  IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -51,4 +52,34 @@ export class UpdateProductDto {
   @IsNumber()
   @IsOptional()
   sale_out?: number;
+}
+
+export class UpdateProductFormDataDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  price: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  discount: string;
+
+  @IsString()
+  @IsNotEmpty()
+  category: string;
+
+  @IsString()
+  @IsNotEmpty()
+  detail: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  amount: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  sale_out: string;
 }

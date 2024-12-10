@@ -10,16 +10,21 @@ import {
   UploadedFiles,
   Query,
   BadRequestException,
+  Put,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import {
+  UpdateProductDto,
+  UpdateProductFormDataDto,
+} from './dto/update-product.dto';
 import { Roles } from '../auth/decorator/role.decorator';
 import { Role } from '../auth/enums/role.enum';
 import { Public } from '../auth/decorator/auth.decorator';
 import {
   FileFieldsInterceptor,
   FileInterceptor,
+  FilesInterceptor,
 } from '@nestjs/platform-express';
 import { ImageValidation } from 'src/pipes/ParseFilePipe.pipe';
 import { GetAllProductDto } from './dto/get-Product.dto';
@@ -76,9 +81,14 @@ export class ProductController {
   }
 
   @Roles(Role.ADMIN)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productService.update(id, updateProductDto);
+  @Put('update/:id')
+  @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 9 }]))
+  update(
+    @Param('id') id: string,
+    @Body() updateProductDto: any,
+    @UploadedFiles() files: { images?: Express.Multer.File[] },
+  ) {
+    return this.productService.updateProduct(id, updateProductDto, files);
   }
 
   @Roles(Role.ADMIN)

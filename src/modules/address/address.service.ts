@@ -70,7 +70,11 @@ export class AddressService {
         throw new NotFoundException(`No addresses found for user ${user_id}`);
       }
 
-      return addresses;
+      return {
+        message: 'Addresses retrieved successfully',
+        statusCode: HttpStatus.OK,
+        detail: addresses,
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -80,21 +84,16 @@ export class AddressService {
     }
   }
 
-  async getUserAddressOnCart(user_id: string) {
+  async getUserAddressOnCart(user_id: string): Promise<any | string> {
     try {
-      const address = await this.addressModel.findOne({
-        user_id,
-        default: true,
-      });
+      const address = await this.addressModel
+        .findOne({ user_id, default: true })
+        .populate('user_id');
 
-      if (!address) {
-        throw new Error('No default address found for the user');
-      }
-
-      return address;
+      return address || [];
     } catch (error) {
-      console.error('Error fetching user address:', error);
-      throw new InternalServerErrorException('Error fetching user address');
+      console.error('Error fetching user address:', error.message);
+      throw new InternalServerErrorException('Unable to fetch user address');
     }
   }
 
@@ -148,38 +147,13 @@ export class AddressService {
       .aggregate([
         {
           $lookup: {
-            from: 'users', // The collection name
-            localField: 'user', // Field in the Post collection
-            foreignField: '_id', // Field in the User collection
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
             as: 'userDetails',
           },
         },
       ])
       .exec();
-  }
-
-  async getProvinces(): Promise<any> {
-    const url =
-      'https://raw.githubusercontent.com/kongvut/thai-province-data/master/api_province_with_amphure_tambon.json';
-
-    try {
-      const response = await lastValueFrom(
-        this.httpService.get(url).pipe(
-          map((res) => res.data),
-          catchError(() => {
-            throw new HttpException(
-              'Failed to fetch provinces data',
-              HttpStatus.INTERNAL_SERVER_ERROR,
-            );
-          }),
-        ),
-      );
-      return response;
-    } catch (error) {
-      throw new HttpException(
-        'Failed to fetch provinces data',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
   }
 }

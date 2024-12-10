@@ -21,9 +21,9 @@ export class CartController {
     return this.cartService.addToCart(createCartDto);
   }
 
-  @Get(':user_id')
-  getItemsOnCart(@Param('user_id') id: string) {
-    return this.cartService.getItemsOnCart2(id);
+  @Get('user_id/:user_id')
+  getItemsOnCart(@Param('user_id') user_id: string) {
+    return this.cartService.getItemsOnCart2(user_id);
   }
 
   @Patch(':id')

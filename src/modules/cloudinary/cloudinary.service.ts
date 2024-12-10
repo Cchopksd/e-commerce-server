@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as cloudinary from 'cloudinary';
+import * as sharp from 'sharp';
 
 @Injectable()
 export class CloudinaryService {
@@ -15,11 +16,15 @@ export class CloudinaryService {
 
   async uploadImage(file: Express.Multer.File, folderName: string) {
     try {
-      const fileStr = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      const resizedBuffer = await this.resizeImage(file.buffer);
+
+      const fileStr = `data:${file.mimetype};base64,${resizedBuffer.toString('base64')}`;
 
       const response = await cloudinary.v2.uploader.upload(fileStr, {
-        resource_type: 'auto',
-        folder: folderName,
+        upload_preset: 'e-commerce',
+        resource_type: 'image',
+        quality: 'auto:low',
+        folder: `e-commerce/${folderName}`,
       });
 
       const images = {
@@ -36,5 +41,12 @@ export class CloudinaryService {
 
   async deleteImage(publicId: string) {
     return await cloudinary.v2.uploader.destroy(publicId);
+  }
+
+  private resizeImage(buffer: Buffer): Promise<Buffer> {
+    return sharp(buffer)
+      .resize({ width: 1024 })
+      .png({ quality: 50 })
+      .toBuffer();
   }
 }

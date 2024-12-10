@@ -9,10 +9,15 @@ export enum UserRole {
   GUEST = 'guest',
 }
 
+class image {
+  image_url: string;
+  public_id: string;
+}
+
 @Schema({ timestamps: true })
 export class User {
   @Prop()
-  profile_image: string;
+  profile_image: image[];
 
   @Prop({ required: true })
   email: string;

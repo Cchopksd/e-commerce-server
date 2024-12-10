@@ -12,6 +12,10 @@ export class ImageValidation implements PipeTransform {
     // Check if multiple files were uploaded
     const { images } = value;
 
+    if (!images) {
+      throw new BadRequestException('Image file is required.');
+    }
+
     if (Array.isArray(images)) {
       images.forEach((file) => {
         this.validateFile(file);

@@ -5,7 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import {
+  UpdateProductDto,
+  UpdateProductFormDataDto,
+} from './dto/update-product.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
@@ -37,7 +40,7 @@ export class ProductService {
       const uploadImages = files.images.map((file) =>
         this.cloudinaryService.uploadImage(
           file,
-          `e-commerce/products/${createProductDto.category}`,
+          `products/${createProductDto.category}`,
         ),
       );
       const uploadResults = await Promise.all(uploadImages);
@@ -105,7 +108,7 @@ export class ProductService {
       return {
         total_items: totalItems,
         total_page: totalPages,
-        page_now: page,
+        page_now: Number(page),
         items: productsWithFavorite,
       };
     } catch (error) {
@@ -244,6 +247,10 @@ export class ProductService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
+    if (updateProductDto.discount >= updateProductDto.price) {
+      throw new BadRequestException('Discount is not greater than price');
+    }
+
     Object.assign(product, updateProductDto);
 
     try {
@@ -257,38 +264,51 @@ export class ProductService {
     }
   }
 
-  // async update(
-  //   id: string,
-  //   updateProductDto: UpdateProductDto,
-  //   session?: any, // เพิ่ม parameter สำหรับ session
-  // ): Promise<Product> {
-  //   const product = await this.productModel.findById(id);
+  async updateProduct(
+    id: string,
+    updateProductDto: any,
+    files: { images?: Express.Multer.File[] },
+  ): Promise<Product> {
+    const product = await this.productModel.findById(id);
 
-  //   if (!product) {
-  //     throw new NotFoundException(`Product with ID ${id} not found`);
-  //   }
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
 
-  //   Object.assign(product, updateProductDto);
+    const { price, discount, amount, sale_out } = updateProductDto;
 
-  //   try {
-  //     // หากมี session ให้ใช้ session ในการทำการบันทึก
-  //     const updatedProduct = await product.save({ session });
+    const numericFields = {
+      price: Number(price),
+      discount: Number(discount),
+      amount: Number(amount),
+      sale_out: Number(sale_out),
+    };
 
-  //     // หากมี session ต้องทำการ commit ธุรกรรม
-  //     if (session) {
-  //       await session.commitTransaction();
-  //     }
+    if (numericFields.discount >= numericFields.price) {
+      throw new BadRequestException('Discount must be less than price');
+    }
 
-  //     return updatedProduct;
-  //   } catch (error) {
-  //     console.error('Error updating product:', error);
-  //     // หากมี session ต้องทำการ rollback ในกรณีที่เกิดข้อผิดพลาด
-  //     if (session) {
-  //       await session.abortTransaction();
-  //     }
-  //     throw new BadRequestException('Failed to update the product');
-  //   }
-  // }
+    try {
+      const uploadImages = files.images.map((file) =>
+        this.cloudinaryService.uploadImage(
+          file,
+          `products/${updateProductDto.category}`,
+        ),
+      );
+      const uploadResults = await Promise.all(uploadImages);
+
+      Object.assign(product, {
+        ...updateProductDto,
+        ...numericFields,
+        images: uploadResults,
+      });
+
+      return await product.save();
+    } catch (error) {
+      console.error('Error updating product:', error.message);
+      throw new BadRequestException('Failed to update the product');
+    }
+  }
 
   async remove(id: string) {
     validateObjectId(id, 'Product');

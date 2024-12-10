@@ -51,7 +51,7 @@ export class AuthService {
 
     const payload: TokenPayload = {
       sub: user._id.toString(),
-      profile_image: user.profile_image,
+      profile_image: user.profile_image[0].image_url,
       email: user.email,
       username: user.username,
       role: user.role,

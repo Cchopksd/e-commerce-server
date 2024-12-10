@@ -25,6 +25,7 @@ export class CartService {
     @InjectModel(Cart.name) private cartModel: Model<CartDocument>,
     @InjectModel(CartItem.name) private cartItemModel: Model<CartItemDocument>,
   ) {}
+
   async addToCart(createCartItemDto: CreateCartItemDto) {
     try {
       validateObjectId(createCartItemDto.user_id, 'User');
@@ -113,9 +114,7 @@ export class CartService {
           .find({ user_id })
           .sort({ createdAt: -1 })
           .populate('product_id'),
-        this.addressService
-          .getUserAddressOnCart(user_id)
-          .then((res) => res.populate('user_id')),
+        this.addressService.getUserAddressOnCart(user_id),
       ]);
 
       return { cart, address };
@@ -213,4 +212,5 @@ export class CartService {
       throw new InternalServerErrorException('Error fetching cart');
     }
   }
+
 }
