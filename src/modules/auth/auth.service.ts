@@ -49,15 +49,7 @@ export class AuthService {
       });
     }
 
-    const payload: TokenPayload = {
-      sub: user._id.toString(),
-      profile_image: user.profile_image[0].image_url,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-    };
-
-    const refreshToken = await this.generateRefreshToken(payload);
+    const refreshToken = await this.generateRefreshToken(user);
 
     return {
       access_token: refreshToken,
@@ -81,7 +73,16 @@ export class AuthService {
     }
   }
 
-  async generateRefreshToken(payload: any) {
+  async generateRefreshToken(user: any) {
+    const payload: TokenPayload = {
+      sub: (user._id ?? user.sub).toString(),
+      profile_image:
+        user.profile_image?.[0]?.image_url ?? user.profile_image ?? '',
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    };
+
     try {
       return this.jwtService.sign(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),

@@ -105,6 +105,7 @@ export class UserService {
       }
 
       let image = null;
+
       if (files?.images) {
         image = await this.cloudinaryService.uploadImage(
           files.images[0],
@@ -117,7 +118,7 @@ export class UserService {
         {
           $set: {
             ...updateUserDto,
-            profile_image: image ? [image] : user.profile_image,
+            profile_image: image && [image],
           },
         },
       );

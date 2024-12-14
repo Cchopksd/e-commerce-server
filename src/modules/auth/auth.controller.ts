@@ -15,10 +15,6 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 import { Public } from './decorator/auth.decorator';
-/* The line `import { Response } from 'express';` is importing the `Response` type from the 'express'
-module in the TypeScript file. This allows the TypeScript code to use the `Response` type defined in
-the 'express' module for handling HTTP responses in the NestJS application. */
-// import { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -51,29 +47,35 @@ export class AuthController {
     };
   }
 
-  @Public()
+  @UseGuards(AuthGuard)
   @Post('refresh-token')
   async refresh(
-    @Req() req: Request & { cookies: { [key: string]: string } },
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refresh_token = req.cookies?.refresh_token;
-    if (!refresh_token) {
-      throw new UnauthorizedException('Refresh token not found in cookies');
-    }
-
     try {
-      const payload =
-        await this.authService.validateRefreshToken(refresh_token);
-      const newAccessToken =
-        await this.authService.generateAccessToken(payload);
+      const user = req.user;
+      if (!user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+
+      const newAccessToken = await this.authService.generateRefreshToken(user);
+
+      res.cookie('access_token', newAccessToken, {
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: false,
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+
       return {
         message: 'Refresh token successfully',
         statusCode: HttpStatus.OK,
         access_token: newAccessToken,
       };
     } catch (error) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException(error.response);
     }
   }
 
