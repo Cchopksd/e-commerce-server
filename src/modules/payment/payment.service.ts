@@ -475,6 +475,7 @@ export class PaymentService {
         statusCode: HttpStatus.CREATED,
         detail: {
           order_id: createOrder._id,
+          payment_id: payment[0]._id,
           chargeId: promptPay.id,
           image: promptPay?.source?.scannable_code?.image?.download_uri,
           amount: promptPay?.source?.amount,
@@ -604,15 +605,68 @@ export class PaymentService {
     }
   }
 
+  async findOneByChargeId(charge_id: string) {
+    const charge = await this.omise.charges.retrieve(charge_id);
+    return charge;
+  }
+
+  async getPaymentByPaymentID(payment_id) {
+    try {
+      const payment = await this.paymentModel.findById(payment_id);
+      if (!payment) {
+        throw new Error(`Payment with ID ${payment_id} not found`);
+      }
+
+      const paymentDetail = await this.omise.charges.retrieve(
+        payment.charge_id,
+      );
+
+      if (payment.payment_method === 'promptPay') {
+        return {
+          message: 'Payment retrieved successfully',
+          statusCode: HttpStatus.OK,
+          detail: {
+            payment_id: payment._id,
+            amount: paymentDetail.amount,
+            currency: paymentDetail.currency,
+            status: paymentDetail.status,
+            payment_method: 'promptPay',
+            created_at: paymentDetail.created_at,
+            transaction_details: {
+              image: paymentDetail?.source?.scannable_code?.image?.download_uri,
+              status: paymentDetail?.status,
+              return_uri: paymentDetail.return_uri,
+              expires_at: paymentDetail.expires_at,
+            },
+            metadata: paymentDetail.metadata || {},
+          },
+        };
+      }
+
+      return {
+        payment_id: payment._id,
+        amount: paymentDetail.amount,
+        currency: paymentDetail.currency,
+        status: paymentDetail.status,
+        payment_method: payment.payment_method,
+        created_at: paymentDetail.created_at,
+        transaction_details: paymentDetail.source || {},
+        metadata: paymentDetail.metadata || {},
+      };
+    } catch (error) {
+      console.error('Error retrieving payment details:', error.message);
+      if (error.message.includes('not found')) {
+        throw new Error('Payment not found in the system');
+      }
+
+      throw error;
+    }
+  }
+
   private calculateTotalAmount(items: ItemDto[]): number {
     return Math.floor(
       items.reduce((sum, item) => sum + item.amount * 100 * item.quantity, 0),
     );
-  }
-
-  async findOneByChargeId(charge_id: string) {
-    const charge = await this.omise.charges.retrieve(charge_id);
-    return charge;
   }
 
   update(id: number, updatePaymentDto: UpdatePaymentDto) {

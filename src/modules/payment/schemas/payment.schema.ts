@@ -13,6 +13,8 @@ export enum PaymentStatus {
 
 @Schema({ timestamps: true })
 export class Payment {
+  _id: string;
+
   @Prop({ required: true })
   charge_id: string;
 

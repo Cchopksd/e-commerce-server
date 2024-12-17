@@ -49,7 +49,15 @@ export class AuthService {
       });
     }
 
-    const refreshToken = await this.generateRefreshToken(user);
+    const payload: TokenPayload = {
+      sub: user._id.toString(),
+      profile_image: user.profile_image?.[0]?.image_url,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    };
+
+    const refreshToken = await this.generateRefreshToken(payload);
 
     return {
       access_token: refreshToken,
@@ -73,16 +81,26 @@ export class AuthService {
     }
   }
 
-  async generateRefreshToken(user: any) {
+  async generateRefreshToken(payload: any) {
+    try {
+      return this.jwtService.sign(payload, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: '7d',
+      });
+    } catch (error) {
+      throw new UnauthorizedException('Failed to generate refresh token');
+    }
+  }
+
+  async generateRefreshTokenInfo(previous: any) {
+    const user = await this.userService.findOne(previous.sub.toString());
     const payload: TokenPayload = {
-      sub: (user._id ?? user.sub).toString(),
-      profile_image:
-        user.profile_image?.[0]?.image_url ?? user.profile_image ?? '',
+      sub: user._id.toString(),
+      profile_image: user.profile_image?.[0]?.image_url,
       email: user.email,
       username: user.username,
       role: user.role,
     };
-
     try {
       return this.jwtService.sign(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),

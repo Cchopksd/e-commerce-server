@@ -212,5 +212,4 @@ export class CartService {
       throw new InternalServerErrorException('Error fetching cart');
     }
   }
-
 }

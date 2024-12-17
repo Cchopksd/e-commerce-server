@@ -16,6 +16,14 @@ import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 import { Public } from './decorator/auth.decorator';
 
+interface TokenPayload {
+  sub: string;
+  profile_image: string;
+  email: string;
+  username: string;
+  role: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -59,7 +67,8 @@ export class AuthController {
         throw new UnauthorizedException('User not authenticated');
       }
 
-      const newAccessToken = await this.authService.generateRefreshToken(user);
+      const newAccessToken =
+        await this.authService.generateRefreshTokenInfo(user);
 
       res.cookie('access_token', newAccessToken, {
         httpOnly: false,

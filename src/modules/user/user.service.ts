@@ -118,7 +118,7 @@ export class UserService {
         {
           $set: {
             ...updateUserDto,
-            profile_image: image && [image],
+            profile_image: image ? image : user.profile_image,
           },
         },
       );

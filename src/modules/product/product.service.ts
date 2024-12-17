@@ -178,7 +178,7 @@ export class ProductService {
           statusCode: 400,
         });
       }
-
+      console.log(favorite);
       return {
         message: 'Get product successfully',
         statusCode: 200,

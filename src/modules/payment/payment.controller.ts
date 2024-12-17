@@ -65,6 +65,11 @@ export class PaymentController {
     return this.paymentService.findOneByChargeId(id);
   }
 
+  @Get('get-payment-by-id/:id')
+  getPaymentByPaymentID(@Param('id') id: string) {
+    return this.paymentService.getPaymentByPaymentID(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
     return this.paymentService.update(+id, updatePaymentDto);
