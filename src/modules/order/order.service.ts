@@ -110,6 +110,21 @@ export class OrderService {
     }
   }
 
+  async getOrderItems(order_id: string) {
+    try {
+      const orderItems = this.orderItemsModel
+        .find({ order_id: order_id })
+        .exec();
+      if (!orderItems) {
+        throw new Error('Order not found');
+      }
+      return orderItems;
+    } catch (error) {
+      console.log(error);
+      throw new error(error);
+    }
+  }
+
   async getUserOrder(getOrderDto: GetOrderDto) {
     try {
       const query: any = { user_id: getOrderDto.user_id };
@@ -352,13 +367,13 @@ export class OrderService {
 
         const updatedOrder = await this.orderModel.findByIdAndUpdate(
           order_id,
-            {
-              status: updateOrderDto.status,
-              shipping_provider: updateOrderDto.shipping_provider,
-              Tracking_id: updateOrderDto.tracking_id,
-            },
-            { new: true },
-          );
+          {
+            status: updateOrderDto.status,
+            shipping_provider: updateOrderDto.shipping_provider,
+            Tracking_id: updateOrderDto.tracking_id,
+          },
+          { new: true },
+        );
 
         if (!updatedOrder) {
           throw new BadRequestException('Failed to update order');

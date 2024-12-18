@@ -27,18 +27,18 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`Application is running on http://localhost:${port}`);
 
-  try {
-    // Establish ngrok tunnel
-    const listener = await ngrok.connect({
-      addr: port,
-      authtoken: process.env.NGROK_AUTHTOKEN,
-      subdomain: 'pika-perfect-gar',
-      region: 'th',
-    });
-    console.log(`Ingress established at: ${listener.url()}`);
-  } catch (err) {
-    console.error('Error establishing ngrok tunnel:', err.message);
-  }
+  // try {
+  //   // Establish ngrok tunnel
+  //   const listener = await ngrok.connect({
+  //     addr: port,
+  //     authtoken: process.env.NGROK_AUTHTOKEN,
+  //     subdomain: 'pika-perfect-gar',
+  //     region: 'th',
+  //   });
+  //   console.log(`Ingress established at: ${listener.url()}`);
+  // } catch (err) {
+  //   console.error('Error establishing ngrok tunnel:', err.message);
+  // }
 }
 
 bootstrap();

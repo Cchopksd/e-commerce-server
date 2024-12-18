@@ -11,6 +11,7 @@ import { OrderModule } from '../order/order.module';
 import { Connection } from 'mongoose';
 import { Card, CardSchema } from './schemas/card.schema';
 import { AddressModule } from '../address/address.module';
+import { ReviewModule } from '../review/review.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AddressModule } from '../address/address.module';
     ProductModule,
     forwardRef(() => OrderModule),
     AddressModule,
+    ReviewModule,
   ],
   controllers: [PaymentController, WebhookController],
   providers: [PaymentService],

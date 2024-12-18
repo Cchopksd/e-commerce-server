@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   forwardRef,
+  HttpStatus,
   Inject,
   Injectable,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { Review, ReviewDocument } from './schema/review.schema';
 import { Model } from 'mongoose';
 import { CreateReviewDto } from './dto/create-review';
 import { ProductService } from '../product/product.service';
+import { UpdateReviewDto } from './dto/update-review';
 
 @Injectable()
 export class ReviewService {
@@ -19,13 +21,12 @@ export class ReviewService {
 
   async create(createReviewDto: CreateReviewDto) {
     try {
-
       const review = await this.reviewModel.create({
         product: createReviewDto.product_id,
         user: createReviewDto.user_id,
         score: createReviewDto.score,
         comment: createReviewDto?.comment ?? '',
-        reviewed: true,
+        reviewed: false,
       });
 
       return {
@@ -36,6 +37,38 @@ export class ReviewService {
       console.error('Error creating review:', error);
       throw new BadRequestException(
         'Failed to create review: ' + error.message,
+      );
+    }
+  }
+
+  async update(updateReviewDto: UpdateReviewDto) {
+    try {
+      const hasReviewed = await this.reviewModel.findById(
+        updateReviewDto.review_id,
+      );
+
+      if (hasReviewed.reviewed == true) {
+        throw new BadRequestException(
+          'This review has already been submitted.',
+        );
+      }
+      const reviewed = await this.reviewModel.updateOne(
+        { _id: updateReviewDto.review_id },
+        {
+          user: updateReviewDto.user_id,
+          score: updateReviewDto.score,
+          comment: updateReviewDto?.comment ?? '',
+          reviewed: true,
+        },
+      );
+      return {
+        message: 'Reviewed successfully',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.error('Error update review:', error);
+      throw new BadRequestException(
+        'Failed to update review: ' + error.message,
       );
     }
   }

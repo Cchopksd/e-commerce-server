@@ -27,6 +27,7 @@ import { ProductService } from '../product/product.service';
 import { OrderService } from '../order/order.service';
 import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
 import { AddressService } from '../address/address.service';
+import { ReviewService } from '../review/review.service';
 
 @Injectable()
 export class PaymentService {
@@ -40,6 +41,7 @@ export class PaymentService {
     private orderService: OrderService,
     private configService: ConfigService,
     private readonly addressService: AddressService,
+    private reviewService: ReviewService,
     @InjectConnection() private readonly connection: Connection,
   ) {
     this.omise = Omise({
@@ -532,10 +534,22 @@ export class PaymentService {
           throw new Error(`Payment with charge_id "${charge_id}" not found`);
         }
 
-        await this.orderService.updateOrder({
+        const order = await this.orderService.updateOrder({
           payment_id: updatedPayment._id.toString(),
           status: OrderStatus.Paid,
         });
+        const orderItems = await this.orderService.getOrderItems(order._id);
+        const reviewPromises = orderItems.map((item) => {
+          const reviewItem = {
+            product_id: item.product_id.toString(),
+            user_id: order.user_id.toString(),
+            score: 0,
+            comment: '',
+          };
+
+          return this.reviewService.create(reviewItem);
+        });
+        await Promise.all(reviewPromises);
       } else if (status === 'failed' || status === 'expired') {
         updatedPayment = await this.paymentModel.findOneAndUpdate(
           { charge_id },
