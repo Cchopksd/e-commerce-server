@@ -77,7 +77,7 @@ export class ReviewService {
   async getByProduct(product_id: string) {
     try {
       const reviews = await this.reviewModel
-        .find({ product: product_id })
+        .find({ product: product_id, review: true })
         .populate('user')
         .exec();
       return reviews;
