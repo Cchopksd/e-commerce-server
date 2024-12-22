@@ -1,9 +1,11 @@
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsNumber,
   IsOptional,
   IsString,
   IsNotEmpty,
+  Min,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -12,9 +14,13 @@ export class CreateProductDto {
   name: string;
 
   @IsNotEmpty()
+  @Type(() => Number)
+  @Min(20, { message: 'Price must be greater than or equal 20.' })
   price: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @Min(20, { message: 'Discount must be greater than or equal 20.' })
   discount?: string;
 
   @IsString()
