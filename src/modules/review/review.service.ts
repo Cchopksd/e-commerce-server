@@ -23,6 +23,7 @@ export class ReviewService {
     try {
       const review = await this.reviewModel.create({
         product: createReviewDto.product_id,
+        order: createReviewDto.order_id,
         user: createReviewDto.user_id,
         score: createReviewDto.score,
         comment: createReviewDto?.comment ?? '',

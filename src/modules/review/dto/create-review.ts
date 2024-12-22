@@ -14,6 +14,10 @@ export class CreateReviewDto {
 
   @IsString()
   @IsNotEmpty()
+  order_id: string;
+
+  @IsString()
+  @IsNotEmpty()
   user_id: string;
 
   @IsNumber()
