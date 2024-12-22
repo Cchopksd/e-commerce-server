@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { OrderService, OrderResponse } from './order.service';
 import { GetAllOrderDto, GetOrderDto } from './dto/getOrder.dto';
@@ -30,10 +31,16 @@ export class OrderController {
     return result;
   }
 
-  @Roles(Role.ADMIN)
   @Get('order-by-id/:id')
-  async getOrderById(@Param('id') order_id: string) {
-    const result = await this.orderService.getOrderById(order_id);
+  async getOrderById(@Param('id') order_id: string, @Req() req) {
+    const user = req.user;
+    const result = await this.orderService.getOrderById(order_id, user.role);
+    return result;
+  }
+
+  @Patch('confirm-order-received')
+  async confirmOrderReceived(@Body('order_id') order_id: string) {
+    const result = await this.orderService.confirmOrderReceived(order_id);
     return result;
   }
 

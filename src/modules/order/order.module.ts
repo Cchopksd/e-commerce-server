@@ -5,12 +5,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './schema/order.schema';
 import { ConfigModule } from '@nestjs/config';
 import { CartModule } from '../cart/cart.module';
-import { Product, ProductSchema } from '../product/schemas/product.schema';
 import { ProductModule } from '../product/product.module';
 import { OrderItems, OrderItemsSchema } from './schema/orderItems.schema';
 import { AddressModule } from '../address/address.module';
 import { PaymentModule } from '../payment/payment.module';
-import { forwardRef, Inject } from '@nestjs/common';
+import { forwardRef } from '@nestjs/common';
+import { ReviewModule } from '../review/review.module';
 
 @Module({
   imports: [
@@ -23,6 +23,7 @@ import { forwardRef, Inject } from '@nestjs/common';
     CartModule,
     ProductModule,
     AddressModule,
+    ReviewModule,
   ],
   controllers: [OrderController],
   providers: [OrderService],

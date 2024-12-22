@@ -20,6 +20,7 @@ import { GetAllOrderDto, GetOrderDto } from './dto/getOrder.dto';
 import { PaymentService } from '../payment/payment.service';
 import { OrderStatus } from './enums/status';
 import { ShippingProvider } from './enums/shipping-provider';
+import { ReviewService } from '../review/review.service';
 
 export interface OrderResponse {
   message: string;
@@ -35,6 +36,7 @@ export class OrderService {
     private orderItemsModel: Model<OrderItemsDocument>,
     @Inject(forwardRef(() => PaymentService))
     private readonly paymentService: PaymentService,
+    private reviewService: ReviewService,
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto, session: any) {
@@ -127,32 +129,34 @@ export class OrderService {
 
   async getUserOrder(getOrderDto: GetOrderDto) {
     try {
-      const query: any = { user_id: getOrderDto.user_id };
+      const { user_id, order_status, page } = getOrderDto;
 
-      if (getOrderDto.order_status && getOrderDto.order_status !== 'all') {
-        query.status = getOrderDto.order_status;
+      const query: any = { user_id };
+
+      if (order_status && order_status !== 'all') {
+        query.status =
+          order_status === 'in-process'
+            ? [OrderStatus.Paid, OrderStatus.InProcess]
+            : order_status;
       }
 
       const limit = 10;
+      const skip = (page - 1) * limit;
 
-      const skip = (getOrderDto.page - 1) * limit;
-
-      let ordersQuery = this.orderModel
+      const ordersQuery = await this.orderModel
         .find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
-
-      ordersQuery = ordersQuery.populate({
-        path: 'shipping_address',
-        match: { status: 'delivered' },
-      });
+        .limit(limit)
+        .populate({
+          path: 'shipping_address',
+          match: { status: 'delivered' },
+        })
+        .exec();
 
       const totalOrders = await this.orderModel.countDocuments(query).exec();
 
-      const orders = await ordersQuery.exec();
-
-      if (!orders || orders.length === 0) {
+      if (!ordersQuery || ordersQuery.length === 0) {
         return {
           message: 'No orders found for the given user and status',
           statusCode: HttpStatus.NOT_FOUND,
@@ -160,22 +164,21 @@ export class OrderService {
         };
       }
 
+      // Fetch related order items
       const orderItems = await this.orderItemsModel
         .find({
-          order_id: { $in: orders.map((order) => order._id) },
+          order_id: { $in: ordersQuery.map((order) => order._id) },
         })
         .populate('product_id')
         .exec();
 
-      const groupedOrders = orders.map((order) => {
+      // Group orders with items
+      const groupedOrders = ordersQuery.map((order) => {
         const orderObj = order.toObject();
         const items = orderItems.filter(
           (item) => item.order_id._id.toString() === order._id.toString(),
         );
-        return {
-          ...orderObj,
-          items,
-        };
+        return { ...orderObj, items };
       });
 
       return {
@@ -184,7 +187,7 @@ export class OrderService {
         detail: {
           total_items: totalOrders,
           total_page: Math.ceil(totalOrders / limit),
-          page_now: getOrderDto.page,
+          page_now: page,
           orders: groupedOrders,
         },
       };
@@ -203,34 +206,38 @@ export class OrderService {
     }
   }
 
-  async getOrderById(order_id: string) {
-    const orders = await this.orderModel
+  async getOrderById(order_id: string, role: string) {
+    const order = await this.orderModel
       .findById(order_id)
       .populate('user_id')
       .populate('payment_id')
       .populate('shipping_address')
       .exec();
 
-    const payment = await this.paymentService.findOneByChargeId(
-      orders.payment_id.charge_id,
-    );
+    if (!order) {
+      throw new Error('Order not found');
+    }
 
     const orderItems = await this.orderItemsModel
-      .find({
-        order_id: { $in: orders._id },
-      })
+      .find({ order_id: order._id })
       .populate('product_id')
       .exec();
 
-    return {
+    const response: any = {
       message: 'Operation processed successfully',
       statusCode: HttpStatus.OK,
       detail: {
-        order_detail: orders,
-        payment_detail: payment,
+        order_detail: order,
         products: orderItems,
       },
     };
+
+    if (role === 'admin') {
+      response.detail.payment_detail =
+        await this.paymentService.findOneByChargeId(order.payment_id.charge_id);
+    }
+
+    return response;
   }
 
   async getAllOrder(getAllOrderDto: GetAllOrderDto) {
@@ -295,6 +302,7 @@ export class OrderService {
     order_id: string,
     updateOrderDto: UpdateOrderDto,
   ): Promise<OrderResponse> {
+    console.log(updateOrderDto.status);
     if (
       !Object.values(OrderStatus).includes(updateOrderDto.status as OrderStatus)
     ) {
@@ -332,9 +340,8 @@ export class OrderService {
 
       const validTransitions = {
         [OrderStatus.Unpaid]: [OrderStatus.Paid],
-        [OrderStatus.Paid]: [OrderStatus.Preparing],
-        [OrderStatus.Preparing]: [OrderStatus.Delivering],
-        [OrderStatus.Delivering]: [OrderStatus.Delivered],
+        [OrderStatus.Paid]: [OrderStatus.InProcess],
+        [OrderStatus.InProcess]: [OrderStatus.Delivered],
         [OrderStatus.Delivered]: [OrderStatus.Successfully],
         [OrderStatus.Refund]: [OrderStatus.Cancelled, OrderStatus.Refunded],
       };
@@ -350,7 +357,7 @@ export class OrderService {
         );
       }
 
-      if (updateOrderDto.status === OrderStatus.Delivering) {
+      if (updateOrderDto.status === OrderStatus.Delivered) {
         if (!updateOrderDto.shipping_provider || !updateOrderDto.tracking_id) {
           throw new BadRequestException(
             'Shipping provider and tracking id are required',
@@ -406,6 +413,53 @@ export class OrderService {
       if (error instanceof BadRequestException) {
         throw error;
       }
+      throw new InternalServerErrorException({
+        message: 'Failed to update order status',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  async confirmOrderReceived(order_id: string) {
+    try {
+      const order = await this.orderModel.findOneAndUpdate(
+        { _id: order_id },
+        { status: OrderStatus.Successfully },
+        { new: true },
+      );
+
+      if (!order) {
+        throw new BadRequestException('Failed to update order');
+      }
+
+      const orderItems = await this.orderItemsModel.find({
+        order_id: order._id,
+      });
+
+      const reviewPromises = orderItems.map((item) => {
+        const reviewItem = {
+          product_id: item.product_id.toString(),
+          order_id: order._id,
+          user_id: order.user_id.toString(),
+          score: 0,
+          comment: '',
+        };
+
+        return this.reviewService.create(reviewItem);
+      });
+      await Promise.all(reviewPromises);
+
+      return {
+        message: 'Operation processed successfully',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.error('Error updating order status:', error);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException({
         message: 'Failed to update order status',
         error: error instanceof Error ? error.message : 'Unknown error',
