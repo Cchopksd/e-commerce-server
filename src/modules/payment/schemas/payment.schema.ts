@@ -32,6 +32,9 @@ export class Payment {
 
   @Prop()
   expires_at?: Date;
+
+  @Prop()
+  paid_at?: Date;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

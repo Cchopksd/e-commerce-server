@@ -28,6 +28,7 @@ import { OrderService } from '../order/order.service';
 import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
 import { AddressService } from '../address/address.service';
 import { ReviewService } from '../review/review.service';
+import { PromptPayDto } from './dto/prompt-pay-dto';
 
 @Injectable()
 export class PaymentService {
@@ -40,8 +41,6 @@ export class PaymentService {
     @Inject(forwardRef(() => OrderService))
     private orderService: OrderService,
     private configService: ConfigService,
-    private readonly addressService: AddressService,
-    private reviewService: ReviewService,
     @InjectConnection() private readonly connection: Connection,
   ) {
     this.omise = Omise({
@@ -335,10 +334,11 @@ export class PaymentService {
     }
   }
 
-  async promptPay(createSourceDto: any) {
+  async promptPay(createSourceDto: PromptPayDto) {
     const transactionSession = await this.connection.startSession();
     transactionSession.startTransaction();
     let cartId: string = '';
+
     try {
       // Step 1: Get items from the cart
       const cartItems = await this.cartService.getItemsOnCart(
@@ -377,6 +377,12 @@ export class PaymentService {
           0,
         ),
       );
+
+      if (totalAmount < 2000) {
+        throw new BadRequestException(
+          'amount must be greater than or equal to ฿20',
+        );
+      }
 
       // Step 3: Prepare charge request
       const charge = {
@@ -525,31 +531,22 @@ export class PaymentService {
       // Handle order updates based on the payment status
       if (status === 'successful') {
         // Update the payment status
+
+        const charge = await this.findOneByChargeId(charge_id);
+
         updatedPayment = await this.paymentModel.findOneAndUpdate(
           { charge_id },
-          { status: OrderStatus.Paid },
+          { status: OrderStatus.Paid, paid_at: charge.paid_at },
           { new: true },
         );
         if (!updatedPayment) {
           throw new Error(`Payment with charge_id "${charge_id}" not found`);
         }
 
-        const order = await this.orderService.updateOrder({
+        await this.orderService.updateOrder({
           payment_id: updatedPayment._id.toString(),
           status: OrderStatus.Paid,
         });
-        const orderItems = await this.orderService.getOrderItems(order._id);
-        const reviewPromises = orderItems.map((item) => {
-          const reviewItem = {
-            product_id: item.product_id.toString(),
-            user_id: order.user_id.toString(),
-            score: 0,
-            comment: '',
-          };
-
-          return this.reviewService.create(reviewItem);
-        });
-        await Promise.all(reviewPromises);
       } else if (status === 'failed' || status === 'expired') {
         updatedPayment = await this.paymentModel.findOneAndUpdate(
           { charge_id },
@@ -647,6 +644,7 @@ export class PaymentService {
             payment_method: 'promptPay',
             created_at: paymentDetail.created_at,
             transaction_details: {
+              charge_id: payment.charge_id,
               image: paymentDetail?.source?.scannable_code?.image?.download_uri,
               status: paymentDetail?.status,
               return_uri: paymentDetail.return_uri,

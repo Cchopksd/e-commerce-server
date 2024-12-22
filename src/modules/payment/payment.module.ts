@@ -12,6 +12,7 @@ import { Connection } from 'mongoose';
 import { Card, CardSchema } from './schemas/card.schema';
 import { AddressModule } from '../address/address.module';
 import { ReviewModule } from '../review/review.module';
+import { PaymentGateway } from './payment.gateway';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { ReviewModule } from '../review/review.module';
     ReviewModule,
   ],
   controllers: [PaymentController, WebhookController],
-  providers: [PaymentService],
+  providers: [PaymentService, PaymentGateway],
   exports: [PaymentService],
 })
 export class PaymentModule {}
