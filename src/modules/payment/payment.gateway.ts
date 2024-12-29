@@ -92,7 +92,7 @@ export class PaymentGateway
       const { user_id, charge_id } = data;
       const key = `${user_id}:${charge_id}`;
 
-      // Update connection information
+
       this.connections.set(key, {
         socket_id: client.id,
         charge_id,
@@ -103,7 +103,7 @@ export class PaymentGateway
         `Registered user_id: ${user_id}, charge_id: ${charge_id}`,
       );
 
-      await this.sendToUserWithCharge(user_id, charge_id, 'registered');
+      await this.sendToUserWithCharge(user_id, charge_id, '');
     } catch (error) {
       this.logger.error('Error in handleRegister:', error);
       client?.emit('error', { message: 'Registration failed' });

@@ -19,7 +19,10 @@ import { Card, CardDocument } from './schemas/card.schema';
 import { OrderStatus } from '../order/enums/status';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
-import { CreateCreditCardDto } from './dto/create-credit-card.dto';
+import {
+  CreateCreditCardDto,
+  CreateNewCreditCardDto,
+} from './dto/create-credit-card.dto';
 import { ItemDto } from './dto/source.dto';
 
 import { CartService } from '../cart/cart.service';
@@ -77,25 +80,6 @@ export class PaymentService {
       });
       return { message: 'Token creation failed', error: error.message };
     }
-    // try {
-    //   const totalAmount = Math.floor(
-    //     product.reduce(
-    //       (sum, item) =>
-    //         sum +
-    //         (item.product_id.discount ?? item.product_id.price) * item.quantity,
-    //       0,
-    //     ),
-    //   );
-    //   const charge = await this.omise.charges.create({
-    //     amount: totalAmount * 100,
-    //     currency: createPaymentDto.currency,
-    //     card: token.id,
-    //   });
-
-    //   return charge;
-    // } catch (error) {
-    //   return { message: 'Payment failed', error: error.message };
-    // }
   }
 
   async addCustomerAttachCreditCard(createCreditCardDto: CreateCreditCardDto) {
@@ -111,6 +95,30 @@ export class PaymentService {
       this.cardModel.create({
         user_id: createCreditCardDto.user_id,
         cust_id: customer.id,
+        default: true,
+      });
+
+      return {
+        message: 'customer has been created',
+        statusCode: HttpStatus.CREATED,
+        detail: customer,
+      };
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      return { message: 'Customer creation failed', error: error.message };
+    }
+  }
+
+  async attachACardToCustomer(createCreditCardDto: CreateNewCreditCardDto) {
+    try {
+      const user = await this.cardModel.findOne({
+        user_id: createCreditCardDto.user_id,
+      });
+
+      const token = await this.createToken(createCreditCardDto);
+
+      const customer = await this.omise.customers.update(user.cust_id, {
+        card: token.id,
       });
 
       return {
@@ -136,10 +144,21 @@ export class PaymentService {
 
       const customer = await this.omise.customers.retrieve(cust.cust_id);
 
+      const customer_card = customer.cards.data;
+
       return {
         message: 'Customer retrieved successfully',
         statusCode: HttpStatus.OK,
-        detail: { customer_id: customer.id, card: customer.cards.data },
+        detail: {
+          card: customer_card.map((items: any) => ({
+            card_id: items.id,
+            name: items.name,
+            brand: items.brand,
+            last_digits: items.last_digits,
+            expiration_month: items.expiration_month,
+            expiration_year: items.expiration_year,
+          })),
+        },
       };
     } catch (error) {
       console.error('Error retrieving customer:', error);
@@ -161,27 +180,6 @@ export class PaymentService {
         error: error.message || 'Unknown error occurred',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       });
-    }
-  }
-
-  async createSource(source: any) {
-    try {
-      const sources = await this.omise.sources.create(source);
-      // console.log('Source created:', data);
-      return sources;
-    } catch (error) {
-      console.error('Error creating source:', error);
-      return { message: 'Source creation failed', error: error.message };
-    }
-  }
-
-  async createCharge(charges: any) {
-    try {
-      const chargesData = await this.omise.charges.create(charges);
-      return chargesData;
-    } catch (error) {
-      console.error('Error creating charge:', error);
-      return { message: 'Charge creation failed', error: error.message };
     }
   }
 
@@ -681,11 +679,23 @@ export class PaymentService {
     );
   }
 
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
+  async createSource(source: any) {
+    try {
+      const sources = await this.omise.sources.create(source);
+      return sources;
+    } catch (error) {
+      console.error('Error creating source:', error);
+      return { message: 'Source creation failed', error: error.message };
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
+  async createCharge(charges: any) {
+    try {
+      const chargesData = await this.omise.charges.create(charges);
+      return chargesData;
+    } catch (error) {
+      console.error('Error creating charge:', error);
+      return { message: 'Charge creation failed', error: error.message };
+    }
   }
 }

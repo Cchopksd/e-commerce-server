@@ -12,7 +12,7 @@ import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CreateSourceDto } from './dto/source.dto';
-import { CreateCreditCardDto } from './dto/create-credit-card.dto';
+import { CreateCreditCardDto, CreateNewCreditCardDto } from './dto/create-credit-card.dto';
 import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
 
 @Controller('payment')
@@ -25,6 +25,15 @@ export class PaymentController {
       await this.paymentService.addCustomerAttachCreditCard(
         createCreditCardDto,
       );
+    return token;
+  }
+
+  @Post('add-new-credit-card')
+  async attachACardToCustomer(
+    @Body() createCreditCardDto: CreateNewCreditCardDto,
+  ) {
+    const token =
+      await this.paymentService.attachACardToCustomer(createCreditCardDto);
     return token;
   }
 
@@ -68,15 +77,5 @@ export class PaymentController {
   @Get('get-payment-by-id/:id')
   getPaymentByPaymentID(@Param('id') id: string) {
     return this.paymentService.getPaymentByPaymentID(id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentService.remove(+id);
   }
 }

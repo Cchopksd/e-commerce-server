@@ -10,6 +10,9 @@ export class Card {
 
   @Prop({ required: true })
   cust_id: string;
+
+  @Prop({ required: true })
+  default: boolean;
 }
 
 export const CardSchema = SchemaFactory.createForClass(Card);
