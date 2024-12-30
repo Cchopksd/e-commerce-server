@@ -86,10 +86,11 @@ export class ProductService {
 
       // Fetch products from the database
       const products = await this.productModel
-        .find({ ...query, amount: { $gt: 0 } })
+        .find({ ...query, amount: { $gt: 0 }, isActive: true })
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
+        .lean()
         .exec();
 
       const favoriteProducts =
@@ -207,7 +208,7 @@ export class ProductService {
   async getTrendingProduct({ user_id }: { user_id: string }) {
     try {
       const trendingProducts = await this.productModel
-        .find()
+        .find({ amount: { $gt: 0 } })
         .sort({ sale_out: -1 })
         .limit(8);
 
