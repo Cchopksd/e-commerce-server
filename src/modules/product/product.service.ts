@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpCode,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -91,7 +93,7 @@ export class ProductService {
         .skip(skip)
         .limit(limit)
         .exec();
- 
+
       const favoriteProducts =
         await this.favoriteService.getFavoriteByUserAndProducts({
           user_id,
@@ -331,6 +333,31 @@ export class ProductService {
     } catch (error) {
       console.error('Error removing product:', error);
       throw new InternalServerErrorException('Error removing product');
+    }
+  }
+
+  async searchProductSuggestion(search: string) {
+    try {
+      const products = await this.productModel
+        .find({
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+          ],
+        })
+        .select('name')
+        .limit(10);
+
+      return {
+        message: 'Get product suggestion successfully',
+        statusCode: HttpStatus.OK,
+        detail: products,
+      };
+    } catch (error) {
+      console.error('Error searching product suggestion:', error);
+      throw new InternalServerErrorException(
+        'Error searching product suggestion',
+      );
     }
   }
 }

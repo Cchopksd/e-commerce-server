@@ -96,4 +96,10 @@ export class ProductController {
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
   }
+
+  @Public()
+  @Post('search-product-suggestion')
+  searchProductSuggestion(@Body('search') search: string) {
+    return this.productService.searchProductSuggestion(search);
+  }
 }
