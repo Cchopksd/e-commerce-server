@@ -86,13 +86,12 @@ export class ProductService {
 
       // Fetch products from the database
       const products = await this.productModel
-        .find({ ...query, amount: { $gt: 0 }, isActive: true })
+        .find({ ...query, amount: { $gt: 0 } })
         .sort({ created_at: -1 })
         .skip(skip)
         .limit(limit)
-        .lean()
         .exec();
-
+ 
       const favoriteProducts =
         await this.favoriteService.getFavoriteByUserAndProducts({
           user_id,
