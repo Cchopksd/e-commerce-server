@@ -81,7 +81,9 @@ export class ProductService {
       const skip = (Number(page) - 1) * limit;
 
       // Calculate total items matching the query
-      const totalItems = await this.productModel.countDocuments(query).exec();
+      const totalItems = await this.productModel
+        .countDocuments({ ...query, amount: { $gt: 0 } })
+        .exec();
 
       // Calculate total pages
       const totalPages = Math.ceil(totalItems / limit);
@@ -109,7 +111,7 @@ export class ProductService {
 
       return {
         total_items: totalItems,
-        total_page: totalPages,
+        total_page: totalPages || 1,
         page_now: Number(page),
         items: productsWithFavorite,
       };
@@ -341,8 +343,7 @@ export class ProductService {
       const products = await this.productModel
         .find({
           $or: [
-            { name: { $regex: search, $options: 'i' } },
-            { description: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' }, amount: { $gt: 0 } },
           ],
         })
         .select('name')
