@@ -29,8 +29,6 @@ import { CartService } from '../cart/cart.service';
 import { ProductService } from '../product/product.service';
 import { OrderService } from '../order/order.service';
 import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
-import { AddressService } from '../address/address.service';
-import { ReviewService } from '../review/review.service';
 import { PromptPayDto } from './dto/prompt-pay-dto';
 import { CoupleService } from '../couple/couple.service';
 
@@ -661,10 +659,19 @@ export class PaymentService {
           throw new Error(`Payment with charge_id "${charge_id}" not found`);
         }
 
-        await this.orderService.updateOrder({
+        const order = await this.orderService.updateOrder({
           payment_id: updatedPayment._id.toString(),
           status: OrderStatus.Cancelled,
         });
+
+        const orderItems = await this.orderService.getOrderItems(order._id);
+
+        for (const item of orderItems) {
+          await this.productService.updatePaymentFailed({
+            id: item.product_id.toString(),
+            quantity: item.quantity,
+          });
+        }
 
         console.warn(
           `Payment with charge_id "${charge_id}" marked as ${status}.`,

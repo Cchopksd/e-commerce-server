@@ -203,7 +203,7 @@ export class ProductService {
       // Handle unexpected exceptions
       throw new InternalServerErrorException({
         message: 'Error fetching product',
-        statusCode: 500, 
+        statusCode: 500,
       });
     }
   }
@@ -246,7 +246,6 @@ export class ProductService {
     session?: any,
   ): Promise<Product> {
     const product = await this.productModel.findById(id);
-
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
@@ -261,6 +260,32 @@ export class ProductService {
       const updatedProduct = await product.save({ session });
 
       return updatedProduct;
+    } catch (error) {
+      console.error('Error updating product:', error);
+
+      throw new BadRequestException('Failed to update the product');
+    }
+  }
+
+  async updatePaymentFailed({
+    id,
+    quantity,
+  }: {
+    id: string;
+    quantity: number;
+  }) {
+    const product = await this.productModel.findById(id);
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    try {
+      product.sale_out = product.sale_out - quantity;
+      product.amount = product.amount + quantity;
+      await product.save();
+
+      return product;
     } catch (error) {
       console.error('Error updating product:', error);
 
