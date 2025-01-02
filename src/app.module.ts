@@ -15,6 +15,7 @@ import { HealthModule } from './modules/health/health.module';
 import { CartModule } from './modules/cart/cart.module';
 import { ReviewModule } from './modules/review/review.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
+import { CoupleModule } from './modules/couple/couple.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { FavoriteModule } from './modules/favorite/favorite.module';
     ReviewModule,
     HealthModule,
     FavoriteModule,
+    CoupleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

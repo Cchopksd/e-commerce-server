@@ -14,6 +14,7 @@ import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CreateSourceDto } from './dto/source.dto';
 import { CreateCreditCardDto, CreateNewCreditCardDto } from './dto/create-credit-card.dto';
 import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
+import { PromptPayDto } from './dto/prompt-pay-dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -44,7 +45,7 @@ export class PaymentController {
   // }
 
   @Post('prompt-pay')
-  async promptPay(@Body() createSourceDto: CreateSourceDto) {
+  async promptPay(@Body() createSourceDto: PromptPayDto) {
     const result = await this.paymentService.promptPay(createSourceDto);
     return result;
   }

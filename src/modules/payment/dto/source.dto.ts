@@ -10,6 +10,7 @@ import {
   ValidateNested,
   IsArray,
   ArrayMinSize,
+  IsOptional,
 } from 'class-validator';
 
 export class ItemDto {
@@ -50,4 +51,8 @@ export class CreateSourceDto {
   @IsString()
   @IsNotEmpty()
   address: string;
+
+  @IsString()
+  @IsOptional()
+  couple_id?: string;
 }

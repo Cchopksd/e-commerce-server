@@ -203,7 +203,7 @@ export class ProductService {
       // Handle unexpected exceptions
       throw new InternalServerErrorException({
         message: 'Error fetching product',
-        statusCode: 500,
+        statusCode: 500, 
       });
     }
   }

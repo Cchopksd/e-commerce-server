@@ -1,5 +1,5 @@
 // create-payment.dto.ts
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreatePayWithCreditCardDto {
   @IsString()
@@ -21,4 +21,8 @@ export class CreatePayWithCreditCardDto {
   @IsString()
   @IsNotEmpty()
   currency: string;
+
+  @IsString()
+  @IsOptional()
+  couple_id?: string;
 }

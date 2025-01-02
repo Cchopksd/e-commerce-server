@@ -32,6 +32,7 @@ import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
 import { AddressService } from '../address/address.service';
 import { ReviewService } from '../review/review.service';
 import { PromptPayDto } from './dto/prompt-pay-dto';
+import { CoupleService } from '../couple/couple.service';
 
 @Injectable()
 export class PaymentService {
@@ -44,6 +45,7 @@ export class PaymentService {
     @Inject(forwardRef(() => OrderService))
     private orderService: OrderService,
     private configService: ConfigService,
+    private coupleService: CoupleService,
     @InjectConnection() private readonly connection: Connection,
   ) {
     this.omise = Omise({
@@ -219,9 +221,30 @@ export class PaymentService {
       });
 
       // Step 2: Calculate total amount
-      const totalAmount = Math.floor(
+      let totalAmount = Math.floor(
         item.reduce((sum, item) => sum + item.amount * 100 * item.quantity, 0),
       );
+
+      if (createPayWithCreditCardDto.couple_id) {
+        const couple = await this.coupleService.getCoupleById(
+          createPayWithCreditCardDto.couple_id,
+        );
+
+        if (!couple) {
+          throw new NotFoundException('Couple not found');
+        }
+
+        item.map((item) => {
+          console.log(item.category, couple.category);
+          if (item.category !== couple.category) {
+            throw new BadRequestException(
+              'Couple is not support with this item: ' + item.name,
+            );
+          }
+        });
+        const discountAmount = (couple.discount_percentage / 100) * totalAmount;
+        totalAmount = totalAmount - discountAmount;
+      }
 
       // Step 3: Create payment
       const creditCard = await this.omise.charges.create({
@@ -327,8 +350,25 @@ export class PaymentService {
 
   async installment(card: any) {
     try {
+      const charge = await this.omise.charges.create({
+        amount: card.amount,
+        currency: 'thb',
+        source: card.source,
+        installment_terms: card.terms,
+      });
+
+      return {
+        message: 'Installment payment created successfully',
+        statusCode: HttpStatus.CREATED,
+        detail: charge,
+      };
     } catch (error) {
-      return { message: 'Payment failed', error: error.message };
+      console.error('Error in installment payment:', error);
+      throw new InternalServerErrorException({
+        message: 'Installment payment failed',
+        error: error.message,
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
     }
   }
 
@@ -369,7 +409,7 @@ export class PaymentService {
       });
 
       // Step 2: Calculate total amount
-      const totalAmount = Math.floor(
+      let totalAmount = Math.floor(
         itemDto.reduce(
           (sum, item) => sum + item.amount * 100 * item.quantity,
           0,
@@ -380,6 +420,27 @@ export class PaymentService {
         throw new BadRequestException(
           'amount must be greater than or equal to ฿20',
         );
+      }
+
+      if (createSourceDto.couple_id) {
+        const couple = await this.coupleService.getCoupleById(
+          createSourceDto.couple_id,
+        );
+
+        if (!couple) {
+          throw new NotFoundException('Couple not found');
+        }
+
+        itemDto.map((item) => {
+          console.log(item.category, couple.category);
+          if (item.category !== couple.category) {
+            throw new BadRequestException(
+              'Couple is not support with this item: ' + item.name,
+            );
+          }
+        });
+        const discountAmount = (couple.discount_percentage / 100) * totalAmount;
+        totalAmount = totalAmount - discountAmount;
       }
 
       // Step 3: Prepare charge request

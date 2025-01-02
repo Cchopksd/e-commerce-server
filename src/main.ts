@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import * as morgan from 'morgan';
 import * as ngrok from '@ngrok/ngrok';
@@ -25,7 +25,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 5500;
   await app.listen(port);
-  console.log(`Application is running on http://localhost:${port}`);
+  Logger.log(`Application is running on http://localhost:${port}`);
 
   // try {
   //   // Establish ngrok tunnel

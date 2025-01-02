@@ -27,7 +27,6 @@ export class WebhookController {
 
     try {
       const { key, data } = webhookDTO;
-      console.log(webhookDTO);
 
       if (key === 'charge.complete') {
         this.logger.log(

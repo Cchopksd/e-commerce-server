@@ -5,6 +5,7 @@ import {
   IsPositive,
   IsNotEmpty,
   IsInt,
+  IsOptional,
 } from 'class-validator';
 
 export class PromptPayDto {
@@ -27,4 +28,8 @@ export class PromptPayDto {
   @IsString()
   @IsNotEmpty()
   address: string;
+
+  @IsString()
+  @IsOptional()
+  couple_id?: string;
 }

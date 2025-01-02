@@ -8,11 +8,11 @@ import { Payment, PaymentSchema } from './schemas/payment.schema';
 import { WebhookController } from './webhook.controller';
 import { ProductModule } from '../product/product.module';
 import { OrderModule } from '../order/order.module';
-import { Connection } from 'mongoose';
 import { Card, CardSchema } from './schemas/card.schema';
 import { AddressModule } from '../address/address.module';
 import { ReviewModule } from '../review/review.module';
 import { PaymentGateway } from './payment.gateway';
+import { CoupleModule } from '../couple/couple.module';
 
 @Module({
   imports: [
@@ -24,6 +24,7 @@ import { PaymentGateway } from './payment.gateway';
     forwardRef(() => OrderModule),
     AddressModule,
     ReviewModule,
+    CoupleModule,
   ],
   controllers: [PaymentController, WebhookController],
   providers: [PaymentService, PaymentGateway],
