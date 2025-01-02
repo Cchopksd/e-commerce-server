@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpStatus,
   Injectable,
   InternalServerErrorException,
@@ -16,14 +17,25 @@ export class CoupleService {
   ) {}
   async createCouple(createCoupleDto: CreateCoupleDto) {
     try {
-      const createdCouple = this.coupleModel.create(createCoupleDto);
+      const ExistCouple = await this.coupleModel.findOne({
+        name: createCoupleDto.name,
+      });
+
+      if (ExistCouple) {
+        throw new BadRequestException('Couple already exists');
+      }
+
+      const createdCouple = await this.coupleModel.create(createCoupleDto);
       return {
         message: 'Couple created successfully',
-        statusCode: HttpStatus.OK,
+        statusCode: HttpStatus.CREATED,
         detail: createdCouple,
       };
     } catch (error) {
       console.error('Error creating couple:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to create couple');
     }
   }
@@ -39,17 +51,27 @@ export class CoupleService {
     }
   }
 
-  async updateCouple(id: string, updateCoupleDto: UpdateCoupleDto) {
+  async updateCouple(updateCoupleDto: UpdateCoupleDto) {
     try {
-      const updatedCouple = this.coupleModel.findByIdAndUpdate(
-        id,
-        updateCoupleDto,
+      const updatedCouple = this.coupleModel.findOneAndUpdate(
+        { _id: updateCoupleDto.id },
+        { $set: { ...updateCoupleDto } },
         { new: true },
       );
       return updatedCouple;
     } catch (error) {
       console.error('Error updating couple:', error);
       throw new InternalServerErrorException('Failed to update couple');
+    }
+  }
+
+  async retrieveCoupleByName(name: string) {
+    try {
+      const couple = this.coupleModel.findOne({ name });
+      return couple;
+    } catch (error) {
+      console.error('Error getting couple:', error);
+      throw new InternalServerErrorException('Failed to get couple');
     }
   }
 

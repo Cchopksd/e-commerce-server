@@ -16,6 +16,8 @@ class image {
 
 @Schema({ timestamps: true })
 export class User {
+  _id: string;
+
   @Prop()
   profile_image: image[];
 

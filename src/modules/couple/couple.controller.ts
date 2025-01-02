@@ -20,29 +20,29 @@ export class CoupleController {
   @Roles(Role.ADMIN)
   @Post('create')
   async createCouple(@Body() createCoupleDto: CreateCoupleDto) {
-    try {
-      const createdCouple =
-        await this.coupleService.createCouple(createCoupleDto);
-      return createdCouple;
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to create couple');
-    }
+    const createdCouple =
+      await this.coupleService.createCouple(createCoupleDto);
+    return createdCouple;
   }
 
   @Roles(Role.ADMIN)
   @Delete('remove/:id')
   async removeCouple(@Param('id') id: string) {
-    try {
-      const result = await this.coupleService.removeCoupleById(id);
+    const result = await this.coupleService.removeCoupleById(id);
 
-      if (!result) {
-        throw new NotFoundException('Couple not found');
-      }
-
-      return { message: 'Couple removed successfully' };
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to remove couple');
+    if (!result) {
+      throw new NotFoundException('Couple not found');
     }
+
+    return { message: 'Couple removed successfully' };
   }
-  async;
+  @Get('retrieve-by-name/:name')
+  async retrieveCouple(@Param('name') name: string) {
+    if (!name) {
+      throw new NotFoundException('Couple not found');
+    }
+    const couple = await this.coupleService.retrieveCoupleByName(name);
+
+    return couple;
+  }
 }

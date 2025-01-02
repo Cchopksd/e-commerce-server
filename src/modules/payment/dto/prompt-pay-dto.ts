@@ -31,5 +31,5 @@ export class PromptPayDto {
 
   @IsString()
   @IsOptional()
-  couple_id?: string;
+  couple_name?: string;
 }

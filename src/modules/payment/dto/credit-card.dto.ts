@@ -24,5 +24,5 @@ export class CreatePayWithCreditCardDto {
 
   @IsString()
   @IsOptional()
-  couple_id?: string;
+  couple_name?: string;
 }

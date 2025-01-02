@@ -14,6 +14,14 @@ import {
 
 export class UpdateCoupleDto {
   @IsString()
+  @IsNotEmpty()
+  id: string;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
   @IsOptional()
   user_id?: string;
 

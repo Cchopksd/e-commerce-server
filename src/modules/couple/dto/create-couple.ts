@@ -13,6 +13,10 @@ import {
 
 export class CreateCoupleDto {
   @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
   @IsOptional()
   user_id?: string;
 

@@ -225,13 +225,30 @@ export class PaymentService {
         item.reduce((sum, item) => sum + item.amount * 100 * item.quantity, 0),
       );
 
-      if (createPayWithCreditCardDto.couple_id) {
+      if (createPayWithCreditCardDto.couple_name) {
         const couple = await this.coupleService.getCoupleById(
-          createPayWithCreditCardDto.couple_id,
+          createPayWithCreditCardDto.couple_name,
         );
 
         if (!couple) {
           throw new NotFoundException('Couple not found');
+        }
+
+        if (couple.validUntil < new Date()) {
+          throw new BadRequestException('This couple is expired');
+        }
+
+        if (couple.quantity <= 0) {
+          throw new BadRequestException('This couple is max usage');
+        }
+
+        if (
+          couple.user_id &&
+          couple.user_id._id.toString() !== createPayWithCreditCardDto.user_id
+        ) {
+          throw new BadRequestException(
+            'This couple is not associated with the given user.',
+          );
         }
 
         item.map((item) => {
@@ -242,6 +259,12 @@ export class PaymentService {
             );
           }
         });
+
+        await this.coupleService.updateCouple({
+          id: couple._id.toString(),
+          quantity: couple.quantity - 1,
+        });
+
         const discountAmount = (couple.discount_percentage / 100) * totalAmount;
         totalAmount = totalAmount - discountAmount;
       }
@@ -422,17 +445,38 @@ export class PaymentService {
         );
       }
 
-      if (createSourceDto.couple_id) {
-        const couple = await this.coupleService.getCoupleById(
-          createSourceDto.couple_id,
+      if (createSourceDto.couple_name) {
+        const couple = await this.coupleService.retrieveCoupleByName(
+          createSourceDto.couple_name,
         );
 
         if (!couple) {
           throw new NotFoundException('Couple not found');
         }
 
+        if (couple.validUntil < new Date()) {
+          throw new BadRequestException('This couple is expired');
+        }
+
+        if (couple.quantity <= 0) {
+          throw new BadRequestException('This couple is max usage');
+        }
+
+        if (
+          couple.user_id &&
+          couple.user_id._id.toString() !== createSourceDto.user_id
+        ) {
+          throw new BadRequestException(
+            'This couple is not associated with the given user.',
+          );
+        }
+
+        await this.coupleService.updateCouple({
+          id: couple._id.toString(),
+          quantity: couple.quantity - 1,
+        });
+
         itemDto.map((item) => {
-          console.log(item.category, couple.category);
           if (item.category !== couple.category) {
             throw new BadRequestException(
               'Couple is not support with this item: ' + item.name,

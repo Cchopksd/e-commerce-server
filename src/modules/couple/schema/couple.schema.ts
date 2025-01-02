@@ -9,10 +9,13 @@ export type CoupleDocument = HydratedDocument<Couple>;
 export class Couple {
   _id: string;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   user_id: User;
 
-  @Prop({ type: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' } })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Product' })
   product_id: Product;
 
   @Prop({ required: true })
