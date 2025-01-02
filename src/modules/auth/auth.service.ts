@@ -1,13 +1,17 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
+import * as jwt from 'jsonwebtoken';
 
 import { UserService } from '../user/user.service';
 import { verifyPassword } from 'src/utils/password.util';
-import { ConfigService } from '@nestjs/config';
+import { Role } from './enums/role.enum';
 
 const AUTH_ERROR_MESSAGES = {
   EMAIL_REQUIRED: 'Email is required',
@@ -27,11 +31,18 @@ interface TokenPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly clientID: string;
+  private readonly clientSecret: string;
+  private readonly redirectUrl: string;
   constructor(
     private configService: ConfigService,
     private userService: UserService,
     private jwtService: JwtService,
-  ) {}
+  ) {
+    this.clientID = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    this.clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
+    this.redirectUrl = this.configService.get<string>('GOOGLE_REDIRECT_URI');
+  }
 
   async signIn(email: string, pass: string): Promise<{ access_token: string }> {
     if (!email) {
@@ -62,6 +73,88 @@ export class AuthService {
     return {
       access_token: refreshToken,
     };
+  }
+
+  async signWithGoogle(): Promise<{ url: string }> {
+    try {
+      // Ensure required OAuth configuration is present
+      if (!this.clientID) {
+        throw new Error('Missing Google Client ID');
+      }
+      if (!this.redirectUrl) {
+        throw new Error('Missing Google Redirect URL');
+      }
+
+      const scopes = ['openid', 'profile', 'email'];
+      const encodedRedirect = encodeURIComponent(this.redirectUrl);
+      const encodedScopes = encodeURIComponent(scopes.join(' '));
+
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${this.clientID}&redirect_uri=${this.redirectUrl}&scope=openid%20profile%20email&access_type=offline`;
+      if (process.env.NODE_ENV === 'development') {
+        console.info(googleAuthUrl);
+      }
+      // Return the generated URL
+      return { url: googleAuthUrl };
+    } catch (error) {
+      // Log and handle errors gracefully
+      console.error(
+        'Error generating Google Auth URL:',
+        error.message || error,
+      );
+      throw new UnauthorizedException('Failed to initialize Google sign-in');
+    }
+  }
+
+  async GoogleCallback(code: string): Promise<{ access_token: string }> {
+    try {
+      const tokenResponse = await axios.post(
+        'https://oauth2.googleapis.com/token',
+        {
+          code,
+          client_id: this.clientID,
+          client_secret: this.clientSecret,
+          redirect_uri: this.redirectUrl,
+          grant_type: 'authorization_code',
+        },
+      );
+      const { id_token } = tokenResponse.data;
+
+      const userInfo: any = jwt.decode(id_token);
+
+      const userIsExist = await this.userService.findByEmail(userInfo.email);
+
+      if (!userIsExist) {
+        await this.userService.createWithGoogle({
+          email: userInfo.email,
+          username: userInfo.name,
+          password: 'google',
+          phone: '0000000000',
+          profile_image: [{ image_url: userInfo.picture, public_id: '' }],
+          first_name: userInfo.given_name || '',
+          last_name: userInfo.family_name || '',
+          age: 0,
+        });
+      }
+
+      const user = await this.userService.findByEmail(userInfo.email);
+
+      const payload: TokenPayload = {
+        sub: user._id.toString(),
+        profile_image: user.profile_image?.[0]?.image_url,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      };
+
+      const refreshToken = await this.generateRefreshToken(payload);
+
+      return {
+        access_token: refreshToken,
+      };
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      throw new UnauthorizedException('Failed to sign in with Google');
+    }
   }
 
   async generateAccessToken(payload: TokenPayload) {

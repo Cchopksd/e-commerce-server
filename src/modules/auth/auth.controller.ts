@@ -9,12 +9,14 @@ import {
   UnauthorizedException,
   Res,
   Req,
+  Inject,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 import { Public } from './decorator/auth.decorator';
+import { ConfigService } from '@nestjs/config';
 
 interface TokenPayload {
   sub: string;
@@ -53,6 +55,32 @@ export class AuthController {
       statusCode: HttpStatus.OK,
       access_token: access_token,
     };
+  }
+
+  @Public()
+  @Get('google')
+  async googleLogin(@Res() res: Response) {
+    const googleAuthUrl = await this.authService.signWithGoogle();
+    return res.redirect(googleAuthUrl.url);
+  }
+
+  @Public()
+  @Get('google/callback')
+  async googleCallback(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const code = req.query.code as string;
+    const token = await this.authService.GoogleCallback(code);
+
+    res.cookie('access_token', token, {
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.redirect('http://localhost:3000');
   }
 
   @UseGuards(AuthGuard)

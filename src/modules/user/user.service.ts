@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto, CreateUserWithGoogleDto } from './dto/create-user.dto';
 import { UpdateUserDto, UpdateUserPasswordDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from 'src/modules/user/schemas/user.schema';
@@ -36,6 +36,22 @@ export class UserService {
     const user = this.userModel.create({
       ...createUserDto,
       password: hashedPassword,
+    });
+
+    return user;
+  }
+
+  async createWithGoogle(createUserWithGoogleDto: CreateUserWithGoogleDto) {
+    const emailExist = await this.findByEmail(createUserWithGoogleDto.email);
+    if (emailExist) {
+      throw new ConflictException({
+        message: 'email already existed',
+        statusCode: 409,
+      });
+    }
+
+    const user = this.userModel.create({
+      ...createUserWithGoogleDto,
     });
 
     return user;

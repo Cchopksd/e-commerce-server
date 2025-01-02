@@ -6,7 +6,6 @@ export type UserDocument = HydratedDocument<User>;
 export enum UserRole {
   ADMIN = 'admin',
   USER = 'user',
-  GUEST = 'guest',
 }
 
 class image {
@@ -36,7 +35,15 @@ export class User {
   @Prop({ required: true })
   last_name: string;
 
-  @Prop({ required: true })
+  @Prop({
+    required: true,
+    validate: {
+      validator: function (value: string) {
+        return value.length === 10;
+      },
+      message: 'Phone number must be exactly 10 characters.',
+    },
+  })
   phone: string;
 
   @Prop({ required: true })
@@ -45,7 +52,7 @@ export class User {
   @Prop({
     type: String,
     enum: UserRole,
-    default: UserRole.GUEST,
+    default: UserRole.USER,
     required: true,
   })
   role: UserRole;

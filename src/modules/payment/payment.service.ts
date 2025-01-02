@@ -237,7 +237,9 @@ export class PaymentService {
         }
 
         if (couple.quantity <= 0) {
-          throw new BadRequestException('This couple is max usage');
+          throw new BadRequestException(
+            'This couple has reached maximum usage limit',
+          );
         }
 
         if (
@@ -457,7 +459,9 @@ export class PaymentService {
         }
 
         if (couple.quantity <= 0) {
-          throw new BadRequestException('This couple is max usage');
+          throw new BadRequestException(
+            'This couple has reached maximum usage limit',
+          );
         }
 
         if (

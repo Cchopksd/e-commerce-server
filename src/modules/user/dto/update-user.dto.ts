@@ -1,6 +1,12 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
-import { IsEmail, IsNumber, IsString, IsNotEmpty } from 'class-validator';
+import {
+  IsEmail,
+  IsNumber,
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 import { IsEnum } from 'class-validator';
 import { UserRole } from '../schemas/user.schema';
 
@@ -18,7 +24,7 @@ export class UpdateUserDto {
   last_name: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   phone: string;
 
   @IsString()
