@@ -26,7 +26,7 @@ import { RedisModule } from './modules/redis/redis.module';
       inject: [ConfigService],
       useFactory: databaseConfig,
     }),
-    RedisModule,
+    // RedisModule,
     UserModule,
     AuthModule,
     AddressModule,

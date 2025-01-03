@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -66,7 +67,7 @@ export class PaymentController {
   }
 
   @Get('get-retrieve-customer')
-  getRetrieveACustomer(@Body('user_id') user_id: string) {
+  getRetrieveACustomer(@Query('user_id') user_id: string) {
     return this.paymentService.getRetrieveACustomer(user_id);
   }
 
