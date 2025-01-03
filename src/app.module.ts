@@ -16,6 +16,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { ReviewModule } from './modules/review/review.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { CoupleModule } from './modules/couple/couple.module';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CoupleModule } from './modules/couple/couple.module';
       inject: [ConfigService],
       useFactory: databaseConfig,
     }),
+    RedisModule,
     UserModule,
     AuthModule,
     AddressModule,
