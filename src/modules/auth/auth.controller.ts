@@ -28,7 +28,10 @@ interface TokenPayload {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService,
+  ) {}
 
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -59,9 +62,10 @@ export class AuthController {
 
   @Public()
   @Get('google')
-  async googleLogin(@Res() res: Response) {
+  async googleLogin() {
     const googleAuthUrl = await this.authService.signWithGoogle();
-    return res.redirect(googleAuthUrl.url);
+
+    return googleAuthUrl;
   }
 
   @Public()
@@ -71,16 +75,17 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const code = req.query.code as string;
-    const token = await this.authService.GoogleCallback(code);
+    const { access_token } = await this.authService.GoogleCallback(code);
 
-    res.cookie('access_token', token, {
-      httpOnly: false,
-      sameSite: 'lax',
-      secure: false,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    res.redirect(
+      `${this.configService.get<string>('REDIRECT_URI')}/oauth?token=${access_token}`,
+    );
 
-    res.redirect('http://localhost:3000');
+    return {
+      message: 'Login successfully',
+      statusCode: HttpStatus.OK,
+      access_token: access_token,
+    };
   }
 
   @UseGuards(AuthGuard)

@@ -215,6 +215,13 @@ export class ProductService {
         .sort({ sale_out: -1 })
         .limit(8);
 
+      if (!user_id) {
+        return trendingProducts.map((product) => ({
+          ...product.toObject(),
+          favorite: false,
+        }));
+      }
+
       const favoriteProducts =
         await this.favoriteService.getFavoriteByUserAndProducts({
           user_id,
@@ -223,14 +230,16 @@ export class ProductService {
           ),
         });
 
-      const productsWithFavorite = trendingProducts.map((product) => ({
-        ...product.toObject(),
-        favorite: favoriteProducts.detail.find(
-          (f) => f.product_id === product._id.toString(),
-        )?.is_favorite,
-      }));
-
-      return productsWithFavorite;
+      return trendingProducts.map((product) => {
+        const favorite =
+          favoriteProducts.detail.find(
+            (f) => f.product_id === product._id.toString(),
+          )?.is_favorite ?? false; 
+        return {
+          ...product.toObject(),
+          favorite,
+        };
+      });
     } catch (error) {
       console.error('Error fetching trending products:', error);
       throw new InternalServerErrorException({
