@@ -19,4 +19,8 @@ export class GetAllProductDto {
   @IsString()
   @IsOptional()
   user_id?: string;
+
+  @IsString()
+  @IsOptional()
+  price?: string;
 }

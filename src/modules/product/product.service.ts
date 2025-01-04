@@ -63,68 +63,74 @@ export class ProductService {
   }
 
   async findAll(getAllProductDto: GetAllProductDto) {
-    const { search, page, user_id } = getAllProductDto;
+    const { search, page = 1, user_id, price } = getAllProductDto;
 
-    const limit = 12;
+    const limit = 12; // Items per page
+    const skip = (Number(page) - 1) * limit;
+
     try {
-      // Define query based on the search parameter
-      const query = search
-        ? {
-            $or: [
-              { name: { $regex: search, $options: 'i' } },
-              { description: { $regex: search, $options: 'i' } },
-            ],
-          }
-        : {};
+      // Define query for search and amount
+      const query: any = {
+        amount: { $gt: 0 }, // Only include products with amount > 0
+      };
 
-      // Calculate skip value for pagination
-      const skip = (Number(page) - 1) * limit;
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ];
+      }
 
-      // Calculate total items matching the query
-      const totalItems = await this.productModel
-        .countDocuments({ ...query, amount: { $gt: 0 } })
-        .exec();
+      const sort: any = {};
+      if (price) {
+        sort.discount = price === 'asc' ? 1 : -1;
+      } else if (price === 'desc') {
+        sort.price = -1;
+      }
 
-      // Calculate total pages
+      // Calculate total items
+      const totalItems = await this.productModel.countDocuments(query).exec();
       const totalPages = Math.ceil(totalItems / limit);
 
-      // Fetch products from the database
+      // Fetch products with pagination and sorting
       const products = await this.productModel
-        .find({ ...query, amount: { $gt: 0 } })
-        .sort({ created_at: -1 })
+        .find(query)
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .exec();
 
-      if (!user_id) {
+      if (user_id) {
+        const favoriteProducts =
+          await this.favoriteService.getFavoriteByUserAndProducts({
+            user_id,
+            product_ids: products.map((product) => product._id.toString()),
+          });
+
+        const productsWithFavorite = products.map((product) => ({
+          ...product.toObject(),
+          favorite:
+            favoriteProducts.detail.find(
+              (f) => f.product_id === product._id.toString(),
+            )?.is_favorite || false,
+        }));
+
         return {
           total_items: totalItems,
           total_page: totalPages || 1,
           page_now: Number(page),
-          items: products.map((product) => {
-            return { ...product.toObject(), favorite: false };
-          }),
+          items: productsWithFavorite,
         };
       }
-
-      const favoriteProducts =
-        await this.favoriteService.getFavoriteByUserAndProducts({
-          user_id,
-          product_ids: products.map((product) => product._id.toString()),
-        });
-
-      const productsWithFavorite = products.map((product) => ({
-        ...product.toObject(),
-        favorite: favoriteProducts.detail.find(
-          (f) => f.product_id === product._id.toString(),
-        )?.is_favorite,
-      }));
 
       return {
         total_items: totalItems,
         total_page: totalPages || 1,
         page_now: Number(page),
-        items: productsWithFavorite,
+        items: products.map((product) => ({
+          ...product.toObject(),
+          favorite: false,
+        })),
       };
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -193,7 +199,7 @@ export class ProductService {
           statusCode: 400,
         });
       }
-      console.log(favorite);
+
       return {
         message: 'Get product successfully',
         statusCode: 200,
