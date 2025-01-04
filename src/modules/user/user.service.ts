@@ -111,7 +111,11 @@ export class UserService {
         throw new BadRequestException('User not found');
       }
 
-      if (user.profile_image && user.profile_image.length > 0) {
+      if (
+        user.profile_image &&
+        user.profile_image.length > 0 &&
+        user.profile_image[0].public_id
+      ) {
         const { result } = await this.cloudinaryService.deleteImage(
           user.profile_image[0].public_id,
         );
