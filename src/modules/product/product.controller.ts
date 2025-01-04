@@ -48,7 +48,6 @@ export class ProductController {
   @Get()
   async findAll(@Query() getAllProductDto: GetAllProductDto) {
     const items = await this.productService.findAll(getAllProductDto);
-
     return items;
   }
 

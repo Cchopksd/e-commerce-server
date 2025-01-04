@@ -96,6 +96,17 @@ export class ProductService {
         .limit(limit)
         .exec();
 
+      if (!user_id) {
+        return {
+          total_items: totalItems,
+          total_page: totalPages || 1,
+          page_now: Number(page),
+          items: products.map((product) => {
+            return { ...product.toObject(), favorite: false };
+          }),
+        };
+      }
+
       const favoriteProducts =
         await this.favoriteService.getFavoriteByUserAndProducts({
           user_id,
