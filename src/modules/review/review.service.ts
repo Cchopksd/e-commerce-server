@@ -88,4 +88,22 @@ export class ReviewService {
       );
     }
   }
+
+  async getIsNoReviewByOrder(user_id: string) {
+    try {
+      const review = await this.reviewModel
+        .find({
+          user: user_id,
+          reviewed: false,
+        })
+        .exec();
+
+      return review;
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      throw new BadRequestException(
+        'Failed to fetch reviews: ' + error.message,
+      );
+    }
+  }
 }

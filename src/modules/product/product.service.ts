@@ -63,7 +63,7 @@ export class ProductService {
   }
 
   async findAll(getAllProductDto: GetAllProductDto) {
-    const { search, page = 1, user_id, price } = getAllProductDto;
+    const { search, page, user_id, price } = getAllProductDto;
 
     const limit = 12; // Items per page
     const skip = (Number(page) - 1) * limit;
@@ -89,7 +89,10 @@ export class ProductService {
       }
 
       // Calculate total items
-      const totalItems = await this.productModel.countDocuments(query).exec();
+      const totalItems = await this.productModel
+        .countDocuments(query)
+        .exec();
+      console.log(totalItems);
       const totalPages = Math.ceil(totalItems / limit);
 
       // Fetch products with pagination and sorting
@@ -117,7 +120,7 @@ export class ProductService {
 
         return {
           total_items: totalItems,
-          total_page: totalPages || 1,
+          total_page: totalPages,
           page_now: Number(page),
           items: productsWithFavorite,
         };
@@ -125,7 +128,7 @@ export class ProductService {
 
       return {
         total_items: totalItems,
-        total_page: totalPages || 1,
+        total_page: totalPages,
         page_now: Number(page),
         items: products.map((product) => ({
           ...product.toObject(),
