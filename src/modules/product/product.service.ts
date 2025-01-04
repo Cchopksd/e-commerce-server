@@ -234,7 +234,7 @@ export class ProductService {
         const favorite =
           favoriteProducts.detail.find(
             (f) => f.product_id === product._id.toString(),
-          )?.is_favorite ?? false; 
+          )?.is_favorite ?? false;
         return {
           ...product.toObject(),
           favorite,
@@ -374,14 +374,31 @@ export class ProductService {
 
   async searchProductSuggestion(search: string) {
     try {
-      const products = await this.productModel
-        .find({
-          $or: [
-            { name: { $regex: search, $options: 'i' }, amount: { $gt: 0 } },
-          ],
-        })
-        .select('name')
-        .limit(10);
+      const products = await this.productModel.aggregate([
+        {
+          $match: {
+            $or: [
+              { name: { $regex: search, $options: 'i' }, amount: { $gt: 0 } },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: '$name', // Group by name
+            name: { $first: '$name' }, // Preserve the name field
+          },
+        },
+        {
+          $project: {
+            _id: 0, // Exclude _id from the result
+            name: 1, // Include name in the result
+          },
+        },
+        {
+          $sort: { name: 1 },
+        },
+        { $limit: 10 },
+      ]);
 
       return {
         message: 'Get product suggestion successfully',
