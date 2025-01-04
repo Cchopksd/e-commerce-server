@@ -92,7 +92,7 @@ export class ProductService {
       const totalItems = await this.productModel
         .countDocuments(query)
         .exec();
-      console.log(totalItems);
+
       const totalPages = Math.ceil(totalItems / limit);
 
       // Fetch products with pagination and sorting
