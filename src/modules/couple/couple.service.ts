@@ -67,7 +67,10 @@ export class CoupleService {
 
   async retrieveCoupleByName(name: string) {
     try {
-      const couple = this.coupleModel.findOne({ name });
+      const couple = this.coupleModel.findOne({ name: name });
+      if (!couple) {
+        throw new BadRequestException('Couple is not defined');
+      }
       return couple;
     } catch (error) {
       console.error('Error getting couple:', error);

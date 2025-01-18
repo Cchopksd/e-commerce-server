@@ -47,7 +47,7 @@ export class ProductService {
       );
       const uploadResults = await Promise.all(uploadImages);
 
-      const newProduct = await this.productModel.create({
+      await this.productModel.create({
         ...createProductDto,
         images: uploadResults,
       });
@@ -89,9 +89,7 @@ export class ProductService {
       }
 
       // Calculate total items
-      const totalItems = await this.productModel
-        .countDocuments(query)
-        .exec();
+      const totalItems = await this.productModel.countDocuments(query).exec();
 
       const totalPages = Math.ceil(totalItems / limit);
 
