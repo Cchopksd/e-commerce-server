@@ -348,7 +348,7 @@ export class ProductService {
 
     try {
       const uploadImages = files.images.map((file) =>
-        this.cloudinaryService.uploadImage(
+        this.cloudFlareService.uploadImage(
           file,
           `products/${updateProductDto.category}`,
         ),
