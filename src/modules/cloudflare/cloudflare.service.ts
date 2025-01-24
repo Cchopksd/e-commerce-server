@@ -40,7 +40,7 @@ export class CloudFlareService {
     try {
       const resizedBuffer = await this.resizeImage(file.buffer);
 
-      const key = `${folderName}/${Date.now()}-${file.originalname}`
+      const key = `images/${folderName}/${Date.now()}-${file.originalname}`
         .replace(' ', '-')
         .replace(/\.[^/.]+$/, '');
 
@@ -75,9 +75,6 @@ export class CloudFlareService {
   }
 
   private resizeImage(buffer: Buffer): Promise<Buffer> {
-    return sharp(buffer)
-      .resize({ width: 1024 })
-      .webp({ quality: 50 })
-      .toBuffer();
+    return sharp(buffer).webp({ quality: 70 }).toBuffer();
   }
 }
