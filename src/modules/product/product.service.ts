@@ -338,6 +338,7 @@ export class ProductService {
     if (discount >= price) {
       throw new BadRequestException('Discount must be less than price');
     }
+ 
 
     try {
       if (files.images && files.images.length > 0) {

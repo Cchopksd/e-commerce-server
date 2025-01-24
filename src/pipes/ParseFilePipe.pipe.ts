@@ -1,6 +1,6 @@
 import {
-  PipeTransform,
   Injectable,
+  PipeTransform,
   ArgumentMetadata,
   BadRequestException,
   UnsupportedMediaTypeException,
@@ -9,19 +9,17 @@ import {
 @Injectable()
 export class ImageValidation implements PipeTransform {
   transform(value: any, metadata: ArgumentMetadata) {
-    // Check if multiple files were uploaded
     const { images } = value;
 
-    // if (!images) {
-    //   throw new BadRequestException('Image file is required.');
-    // }
+    if (!images || images.length === 0) {
+      return value;
+    }
 
     if (Array.isArray(images)) {
       images.forEach((file) => {
         this.validateFile(file);
       });
     } else {
-      // Handle the case for a single file
       this.validateFile(images);
     }
 
@@ -30,14 +28,17 @@ export class ImageValidation implements PipeTransform {
 
   private validateFile(file: any) {
     const tenMb = 10 * 1000 * 1000; // 10MB in bytes
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']; // Only allow .jpg and .png
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']; // Allowed MIME types
+
+    // Validate file size
     if (file.size > tenMb) {
       throw new BadRequestException('File size should be less than 10MB');
     }
 
+    // Validate MIME type
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new UnsupportedMediaTypeException(
-        'File Media Type support is: image/jpeg, image/png, image/webp'
+        'File Media Type support is: image/jpeg, image/png, image/webp',
       );
     }
   }
