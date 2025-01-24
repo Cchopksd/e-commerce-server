@@ -80,12 +80,13 @@ export class ProductController {
   }
 
   @Roles(Role.ADMIN)
-  @Put('update/:id')
+  @Patch('update/:id')
   @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 9 }]))
   update(
     @Param('id') id: string,
-    @Body() updateProductDto: any,
-    @UploadedFiles() files: { images?: Express.Multer.File[] },
+    @Body() updateProductDto: UpdateProductDto,
+    @UploadedFiles(new ImageValidation())
+    files?: { images: Express.Multer.File[] },
   ) {
     return this.productService.updateProduct(id, updateProductDto, files);
   }

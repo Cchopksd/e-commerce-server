@@ -42,7 +42,7 @@ export class CloudFlareService {
 
       const key = `images/${folderName}/${Date.now()}-${file.originalname}`
         .replace(' ', '-')
-        .replace(/\.[^/.]+$/, '');
+        .replace(/\.[^/.]+$/, '.webp');
 
       const command = new PutObjectCommand({
         Bucket: this.bucket_name,

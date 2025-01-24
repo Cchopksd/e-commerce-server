@@ -8,11 +8,6 @@ export enum UserRole {
   USER = 'user',
 }
 
-class image {
-  image_url: string;
-  public_id: string;
-}
-
 @Schema({ timestamps: true })
 export class User {
   _id: string;

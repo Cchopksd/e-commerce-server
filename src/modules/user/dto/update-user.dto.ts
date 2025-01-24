@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { IsEnum } from 'class-validator';
 import { UserRole } from '../schemas/user.schema';
+import { Transform } from 'class-transformer';
 
 export class UpdateUserDto {
   @IsString()
@@ -27,9 +28,10 @@ export class UpdateUserDto {
   @IsOptional()
   phone: string;
 
-  @IsString()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
   @IsNotEmpty()
-  age: string;
+  age: number;
 }
 
 export class UpdateUserPasswordDto {

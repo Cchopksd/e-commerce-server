@@ -106,7 +106,6 @@ export class UserService {
     files: { images?: Express.Multer.File },
   ) {
     try {
-      Number(updateUserDto.age);
 
       const user = await this.userModel.findById({ _id: user_id });
       if (!user) {

@@ -324,7 +324,7 @@ export class ProductService {
 
   async updateProduct(
     id: string,
-    updateProductDto: any,
+    updateProductDto: UpdateProductDto,
     files: { images?: Express.Multer.File[] },
   ): Promise<Product> {
     const product = await this.productModel.findById(id);
@@ -333,33 +333,31 @@ export class ProductService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    const { price, discount, amount, sale_out } = updateProductDto;
+    const { price, discount } = updateProductDto;
 
-    const numericFields = {
-      price: Number(price),
-      discount: Number(discount),
-      amount: Number(amount),
-      sale_out: Number(sale_out),
-    };
-
-    if (numericFields.discount >= numericFields.price) {
+    if (discount >= price) {
       throw new BadRequestException('Discount must be less than price');
     }
 
     try {
-      const uploadImages = files.images.map((file) =>
-        this.cloudFlareService.uploadImage(
-          file,
-          `products/${updateProductDto.category}`,
-        ),
-      );
-      const uploadResults = await Promise.all(uploadImages);
+      if (files.images && files.images.length > 0) {
+        const uploadImages = files.images.map((file) =>
+          this.cloudFlareService.uploadImage(
+            file,
+            `products/${updateProductDto.category}`,
+          ),
+        );
+        const uploadResults = await Promise.all(uploadImages);
 
-      Object.assign(product, {
-        ...updateProductDto,
-        ...numericFields,
-        images: uploadResults,
-      });
+        Object.assign(product, {
+          ...updateProductDto,
+          images: uploadResults,
+        });
+      } else {
+        Object.assign(product, {
+          ...updateProductDto,
+        });
+      }
 
       return await product.save();
     } catch (error) {
@@ -377,11 +375,14 @@ export class ProductService {
     }
 
     try {
-      const removeImagePromises = product.images.map(async (file) => {
-        await this.cloudinaryService.deleteImage(file.public_id);
-      });
+      if (product.images && product.images.length > 0) {
+        const removeImagePromises = product.images.map((image) => {
+          const fileName = image.toString().split('/').pop();
+          return this.cloudFlareService.deleteImage(`products/${fileName}`);
+        });
 
-      await Promise.all(removeImagePromises);
+        await Promise.all(removeImagePromises);
+      }
 
       await this.productModel.findByIdAndDelete(id);
 

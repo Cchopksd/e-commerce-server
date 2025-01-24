@@ -4,6 +4,9 @@ import mongoose, { HydratedDocument } from 'mongoose';
 export type ProductDocument = HydratedDocument<Product>;
 
 class image {
+  split(arg0: string) {
+    throw new Error('Method not implemented.');
+  }
   image_url: string;
   public_id: string;
 }

@@ -6,33 +6,19 @@ import {
   ValidateNested,
   IsNotEmpty,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-
-class Image {
-  @IsString()
-  @IsOptional()
-  image_url?: string;
-
-  @IsString()
-  @IsOptional()
-  public_id?: string;
-}
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateProductDto {
   @IsString()
   @IsOptional()
   name?: string;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => Image)
-  @IsOptional()
-  images?: Image[];
-
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @IsOptional()
   price?: number;
 
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @IsOptional()
   discount?: number;
@@ -45,10 +31,12 @@ export class UpdateProductDto {
   @IsOptional()
   detail?: string;
 
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @IsOptional()
   amount?: number;
 
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @IsOptional()
   sale_out?: number;

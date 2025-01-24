@@ -8,6 +8,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { OrderStatus } from '../enums/status';
+import { Transform } from 'class-transformer';
 
 export class GetOrderDto {
   @IsNotEmpty()
@@ -25,7 +26,8 @@ export class GetAllOrderDto {
   @IsEnum(OrderStatus)
   order_status: OrderStatus;
 
+  @Transform(({ value }) => Number(value))
   @IsString()
   @IsOptional()
-  page: string;
+  page: number;
 }
