@@ -6,6 +6,7 @@ import { Product, ProductSchema } from './schemas/product.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { FavoriteModule } from '../favorite/favorite.module';
 import { ReviewModule } from '../review/review.module';
+import { CloudFlareService } from '../cloudflare/cloudflare.service';
 
 @Module({
   imports: [
@@ -14,8 +15,7 @@ import { ReviewModule } from '../review/review.module';
     ReviewModule,
   ],
   controllers: [ProductController],
-  providers: [ProductService, CloudinaryService],
+  providers: [ProductService, CloudinaryService, CloudFlareService],
   exports: [ProductService],
 })
 export class ProductModule {}
-

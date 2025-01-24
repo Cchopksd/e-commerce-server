@@ -62,7 +62,7 @@ export class AuthService {
 
     const payload: TokenPayload = {
       sub: user._id.toString(),
-      profile_image: user.profile_image?.[0]?.image_url,
+      profile_image: user.profile_image,
       email: user.email,
       username: user.username,
       role: user.role,
@@ -140,7 +140,7 @@ export class AuthService {
 
       const payload: TokenPayload = {
         sub: user._id.toString(),
-        profile_image: user.profile_image?.[0]?.image_url,
+        profile_image: user.profile_image,
         email: user.email,
         username: user.username,
         role: user.role,
@@ -189,7 +189,7 @@ export class AuthService {
     const user = await this.userService.findOne(previous.sub.toString());
     const payload: TokenPayload = {
       sub: user._id.toString(),
-      profile_image: user.profile_image?.[0]?.image_url,
+      profile_image: user.profile_image,
       email: user.email,
       username: user.username,
       role: user.role,

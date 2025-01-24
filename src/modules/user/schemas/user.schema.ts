@@ -18,7 +18,7 @@ export class User {
   _id: string;
 
   @Prop()
-  profile_image: image[];
+  profile_image: string;
 
   @Prop({ required: true })
   email: string;

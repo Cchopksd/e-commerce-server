@@ -6,6 +6,7 @@ import { User, UserSchema } from 'src/modules/user/schemas/user.schema';
 import { Address, AddressSchema } from '../address/schemas/address.schema';
 import { AddressService } from '../address/address.service';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { CloudFlareService } from '../cloudflare/cloudflare.service';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     CloudinaryModule,
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, CloudFlareService],
   exports: [UserService],
 })
 export class UserModule {}

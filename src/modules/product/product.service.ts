@@ -20,12 +20,14 @@ import { shuffleItems } from 'src/utils/shuffleArray.util';
 import { FavoriteService } from '../favorite/favorite.service';
 import { ReviewService } from '../review/review.service';
 import { GetAllProductDto } from './dto/get-Product.dto';
+import { CloudFlareService } from '../cloudflare/cloudflare.service';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     private cloudinaryService: CloudinaryService,
+    private cloudFlareService: CloudFlareService,
     private favoriteService: FavoriteService,
     private reviewService: ReviewService,
   ) {}
@@ -40,7 +42,7 @@ export class ProductService {
       }
 
       const uploadImages = files.images.map((file) =>
-        this.cloudinaryService.uploadImage(
+        this.cloudFlareService.uploadImage(
           file,
           `products/${createProductDto.category}`,
         ),

@@ -17,6 +17,7 @@ import { ReviewModule } from './modules/review/review.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { CoupleModule } from './modules/couple/couple.module';
 import { RedisModule } from './modules/redis/redis.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { RedisModule } from './modules/redis/redis.module';
     HealthModule,
     FavoriteModule,
     CoupleModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

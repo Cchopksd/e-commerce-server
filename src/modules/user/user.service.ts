@@ -14,6 +14,7 @@ import { Model } from 'mongoose';
 import { hashPassword, verifyPassword } from 'src/utils/password.util';
 import { Address, AddressDocument } from '../address/schemas/address.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { CloudFlareService } from '../cloudflare/cloudflare.service';
 
 @Injectable()
 export class UserService {
@@ -21,6 +22,7 @@ export class UserService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Address.name) private addressModel: Model<AddressDocument>,
     private cloudinaryService: CloudinaryService,
+    private cloudFlareService: CloudFlareService,
   ) {}
   async create(createUserDto: CreateUserDto) {
     const emailExist = await this.findByEmail(createUserDto.email);
@@ -111,13 +113,9 @@ export class UserService {
         throw new BadRequestException('User not found');
       }
 
-      if (
-        user.profile_image &&
-        user.profile_image.length > 0 &&
-        user.profile_image[0].public_id
-      ) {
-        const { result } = await this.cloudinaryService.deleteImage(
-          user.profile_image[0].public_id,
+      if (user.profile_image) {
+        const result = await this.cloudFlareService.deleteImage(
+          `profiles/${user.profile_image.split('/').pop()}`,
         );
         if (!result) {
           throw new Error('Failed to delete old profile image');
@@ -127,7 +125,7 @@ export class UserService {
       let image = null;
 
       if (files?.images) {
-        image = await this.cloudinaryService.uploadImage(
+        image = await this.cloudFlareService.uploadImage(
           files.images[0],
           'profiles',
         );
