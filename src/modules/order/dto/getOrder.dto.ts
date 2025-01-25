@@ -27,7 +27,7 @@ export class GetAllOrderDto {
   order_status: OrderStatus;
 
   @Transform(({ value }) => Number(value))
-  @IsString()
+  @IsNumber()
   @IsOptional()
   page: number;
 }
