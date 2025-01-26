@@ -16,19 +16,27 @@ export class CloudFlareService {
   private s3Client: S3Client;
   private bucket_name: string;
   private domain_name: string;
+  private account_id: string;
+  private access_key_id: string;
+  private secret_access_key: string;
 
   constructor(private configService: ConfigService) {
     this.bucket_name = this.configService.get<string>('CLOUDFLARE_BUCKET_NAME');
     this.domain_name = this.configService.get<string>('DOMAIN_NAME');
+    this.account_id = this.configService.get<string>('CLOUDFLARE_ACCOUNT_ID');
+    this.access_key_id = this.configService.get<string>(
+      'CLOUDFLARE_ACCESS_KEY',
+    );
+    this.secret_access_key = this.configService.get<string>(
+      'CLOUDFLARE_SECRET_KEY',
+    );
 
     this.s3Client = new S3Client({
       region: 'auto',
-      endpoint: `https://${this.configService.get<string>('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
+      endpoint: `https://${this.account_id}.r2.cloudflarestorage.com`,
       credentials: {
-        accessKeyId: this.configService.get<string>('CLOUDFLARE_ACCESS_KEY'),
-        secretAccessKey: this.configService.get<string>(
-          'CLOUDFLARE_SECRET_KEY',
-        ),
+        accessKeyId: this.access_key_id,
+        secretAccessKey: this.secret_access_key,
       },
     });
   }

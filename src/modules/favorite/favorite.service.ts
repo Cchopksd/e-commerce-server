@@ -1,4 +1,9 @@
-import { HttpCode, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpCode,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Favorite, FavoriteDocument } from './schema/favorite.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -20,28 +25,27 @@ export class FavoriteService {
       product_id: createFavoriteDto.product_id,
     });
 
-    if (isHasFavorite) {
-      try {
-        const favorite = await this.favoriteModel.updateOne(
-          { _id: new Object(isHasFavorite._id) },
-          { $set: { is_favorite: createFavoriteDto.is_favorite } },
-        );
-        return {
-          message: 'Favorite updated successfully',
-          statusCode: 200,
-        };
-      } catch (error) {
-        return {
-          message: 'Failed to update favorite',
-          statusCode: 500,
-          error: error.message,
-        };
+    if (!createFavoriteDto.is_favorite) {
+      if (isHasFavorite) {
+        try {
+          await this.favoriteModel.findOneAndDelete({
+            _id: new Object(isHasFavorite._id),
+          });
+
+          return {
+            message: 'Favorite updated successfully',
+            statusCode: 200,
+          };
+        } catch (error) {
+          throw new InternalServerErrorException('Failed to update favorite');
+        }
       }
+      throw new BadRequestException('');
     }
     try {
       const favorite = await this.favoriteModel.create(createFavoriteDto);
       return {
-        message: 'Favorite created successfully',
+        message: 'Favorite updated successfully',
         statusCode: 200,
       };
     } catch (error) {

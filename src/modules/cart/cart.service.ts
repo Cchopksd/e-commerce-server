@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { CreateCartDto } from './dto/create-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { CreateCartItemDto } from './dto/create-cart-item.dto';
 import { InjectModel } from '@nestjs/mongoose';
 
@@ -210,6 +210,35 @@ export class CartService {
     } catch (error) {
       console.error('Error fetching cart:', error);
       throw new InternalServerErrorException('Error fetching cart');
+    }
+  }
+
+  async countItemInCart(user_id: string) {
+    try {
+      const totalQuantity = await this.cartItemModel
+        .aggregate([
+          {
+            $match: { user_id: new mongoose.Types.ObjectId(user_id) },
+          },
+          {
+            $group: {
+              _id: null,
+              totalQuantity: { $sum: '$quantity' },
+            },
+          },
+        ])
+        .exec();
+      const amount =
+        totalQuantity.length > 0 ? totalQuantity[0].totalQuantity : 0;
+
+      return {
+        message: 'Operation successful',
+        statusCode: HttpStatus.OK,
+        count: amount,
+      };
+    } catch (error) {
+      console.error('Error counting items in cart:', error);
+      throw new Error('Failed to count items in cart');
     }
   }
 }

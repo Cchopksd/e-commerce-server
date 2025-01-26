@@ -21,5 +21,4 @@ export class CartItem {
   quantity: number;
 }
 
-// Create the schema
 export const CartItemSchema = SchemaFactory.createForClass(CartItem);

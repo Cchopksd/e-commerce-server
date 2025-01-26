@@ -338,7 +338,28 @@ export class ProductService {
     if (discount >= price) {
       throw new BadRequestException('Discount must be less than price');
     }
- 
+
+    if (product.images && product.images.length > 0) {
+      const imagePaths = product.images.map((item: any) => {
+        if (item && !item.image_url) {
+          return `products/${item.split('/').pop()}`;
+        }
+      });
+
+      try {
+        const result = await Promise.all(
+         
+            imagePaths.map((path) => this.cloudFlareService.deleteImage(path)),
+        );
+
+        if (result.some((res) => !res)) {
+          throw new Error('Failed to delete old profile image');
+        }
+      } catch (error) {
+        console.error('Error deleting images:', error);
+        throw new Error('Failed to delete old profile images');
+      }
+    }
 
     try {
       if (files.images && files.images.length > 0) {

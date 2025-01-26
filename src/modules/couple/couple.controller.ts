@@ -32,6 +32,7 @@ export class CoupleController {
 
     return { message: 'Couple removed successfully' };
   }
+  
   @Get('')
   async retrieveCouple(@Query('name') name: string) {
     if (!name) {
