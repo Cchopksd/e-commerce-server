@@ -79,6 +79,15 @@ export class ProductController {
     return this.productService.getTrendingProduct({ user_id });
   }
 
+  @Public()
+  @Get('/familiar-product')
+  getFamiliarProduct(
+    @Query('user_id') user_id: string | null,
+    @Query('product_id') product_id: string,
+  ) {
+    return this.productService.getFamiliarProduct({ product_id, user_id });
+  }
+
   @Roles(Role.ADMIN)
   @Patch('update/:id')
   @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 9 }]))

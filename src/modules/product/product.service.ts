@@ -269,6 +269,61 @@ export class ProductService {
     }
   }
 
+  async getFamiliarProduct({
+    product_id,
+    user_id,
+  }: {
+    product_id: string;
+    user_id: string;
+  }) {
+    try {
+      const product = await this.productModel.findById(product_id);
+      if (!product) {
+        throw new BadRequestException({
+          message: 'Cannot find item',
+          statusCode: 400,
+        });
+      }
+
+      const products = await this.productModel
+        .find({
+          amount: { $gt: 0 },
+          category: product.category,
+          _id: { $ne: product_id },
+        })
+        .limit(5);
+
+      const favoriteProducts =
+        await this.favoriteService.getFavoriteByUserAndProducts({
+          user_id,
+          product_ids: products.map((product) => product._id.toString()),
+        });
+
+      const FamiliarProduct = products.map((product) => {
+        const favorite =
+          favoriteProducts.detail.find(
+            (f) => f.product_id === product._id.toString(),
+          )?.is_favorite ?? false;
+        return {
+          ...product.toObject(),
+          favorite,
+        };
+      });
+
+      return {
+        message: 'Get familiar products successfully',
+        statusCode: 200,
+        detail: FamiliarProduct,
+      };
+    } catch (error) {
+      console.error('Error fetching familiar products:', error);
+      throw new InternalServerErrorException({
+        message: 'Error fetching familiar products',
+        statusCode: 500,
+      });
+    }
+  }
+
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
@@ -348,8 +403,7 @@ export class ProductService {
 
       try {
         const result = await Promise.all(
-         
-            imagePaths.map((path) => this.cloudFlareService.deleteImage(path)),
+          imagePaths.map((path) => this.cloudFlareService.deleteImage(path)),
         );
 
         if (result.some((res) => !res)) {
