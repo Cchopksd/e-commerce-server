@@ -65,15 +65,17 @@ export class ProductService {
   }
 
   async findAll(getAllProductDto: GetAllProductDto) {
-    const { search, page, user_id, price } = getAllProductDto;
+    let { search, page, user_id, price, category, limit } = getAllProductDto;
 
-    const limit = 12; // Items per page
-    const skip = (Number(page) - 1) * limit;
+    const skip = (page - 1) * limit;
+
+    if (limit <= 0) {
+      limit = 12;
+    }
 
     try {
-      // Define query for search and amount
       const query: any = {
-        amount: { $gt: 0 }, // Only include products with amount > 0
+        amount: { $gt: 0 },
       };
 
       if (search) {
@@ -83,9 +85,17 @@ export class ProductService {
         ];
       }
 
+      if (category) {
+        query.$or = [
+          { category: { $regex: category, $options: 'i' } },
+          // { sub_category: { $regex: category, $options: 'i' } },
+        ];
+      }
+
       const sort: any = {};
       if (price) {
         sort.discount = price === 'asc' ? 1 : -1;
+        sort.price = price === 'asc' ? 1 : -1;
       } else if (price === 'desc') {
         sort.price = -1;
       }
@@ -293,27 +303,39 @@ export class ProductService {
         })
         .limit(5);
 
+      if (!user_id) {
+        return {
+          message: 'Get familiar products successfully',
+          statusCode: 200,
+          detail: products.map((product) => ({
+            ...product.toObject(),
+            favorite: false,
+          })),
+        };
+      }
+
+      // ดึงข้อมูล favorite ของผลิตภัณฑ์ทั้งหมดในครั้งเดียว
       const favoriteProducts =
         await this.favoriteService.getFavoriteByUserAndProducts({
           user_id,
           product_ids: products.map((product) => product._id.toString()),
         });
 
-      const FamiliarProduct = products.map((product) => {
-        const favorite =
-          favoriteProducts.detail.find(
-            (f) => f.product_id === product._id.toString(),
-          )?.is_favorite ?? false;
-        return {
-          ...product.toObject(),
-          favorite,
-        };
-      });
+      // สร้าง Map สำหรับการค้นหาว่าผลิตภัณฑ์ไหนเป็น favorite
+      const favoriteMap = new Map(
+        favoriteProducts.detail.map((fav) => [fav.product_id, fav.is_favorite]),
+      );
+
+      // ใช้ favoriteMap ในการคำนวณ favorite สำหรับแต่ละผลิตภัณฑ์
+      const familiarProducts = products.map((product) => ({
+        ...product.toObject(),
+        favorite: favoriteMap.get(product._id.toString()) ?? false,
+      }));
 
       return {
         message: 'Get familiar products successfully',
         statusCode: 200,
-        detail: FamiliarProduct,
+        detail: familiarProducts,
       };
     } catch (error) {
       console.error('Error fetching familiar products:', error);

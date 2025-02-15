@@ -314,7 +314,7 @@ export class PaymentService {
         product_info: cartItems.map((item: any) => ({
           product_id: item.product_id._id,
           quantity: item.quantity,
-          price_at_purchase: item.product_id.discount ?? item.product_id.price,
+          price_at_purchase: item.product_id.discount || item.product_id.price,
         })),
       };
 
@@ -561,7 +561,7 @@ export class PaymentService {
         product_info: cartItems.map((item: any) => ({
           product_id: item.product_id._id,
           quantity: item.quantity,
-          price_at_purchase: item.product_id.discount ?? item.product_id.price,
+          price_at_purchase: item.product_id.discount || item.product_id.price,
         })),
       };
 

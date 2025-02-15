@@ -14,13 +14,23 @@ export class GetAllProductDto {
 
   @IsString()
   @IsOptional()
-  page?: string;
-
-  @IsString()
-  @IsOptional()
   user_id?: string;
 
   @IsString()
   @IsOptional()
   price?: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  page?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  limit?: number;
 }
