@@ -151,6 +151,7 @@ export class PaymentService {
         statusCode: HttpStatus.OK,
         detail: {
           card: customer_card.map((items: any) => ({
+            cust_id: cust.cust_id,
             card_id: items.id,
             name: items.name,
             brand: items.brand,
@@ -297,7 +298,7 @@ export class PaymentService {
             charge_id: creditCard.id,
             user_id: createPayWithCreditCardDto.user_id,
             amount: creditCard?.amount,
-            status: creditCard?.status,
+            status: OrderStatus.Paid,
             payment_method: 'creditCard',
             expires_at: creditCard.expires_at,
           },
@@ -322,6 +323,7 @@ export class PaymentService {
         prepareOrder,
         transactionSession,
       );
+
 
       // Step 9: Destroy cart
       const destroyCart = await this.cartService.destroyCart(

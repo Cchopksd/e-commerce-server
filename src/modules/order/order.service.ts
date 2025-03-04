@@ -54,7 +54,7 @@ export class OrderService {
           {
             user_id,
             payment_id,
-            order_status,
+            status: order_status,
             shipping_address,
           },
         ],
