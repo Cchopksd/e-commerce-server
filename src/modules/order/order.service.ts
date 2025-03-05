@@ -240,6 +240,40 @@ export class OrderService {
     return response;
   }
 
+  async getOrderByUserId(user_id: string, role: string) {
+    const order = await this.orderModel
+      .findOne({ user_id })
+      .populate('user_id')
+      .populate('payment_id')
+      .populate('shipping_address')
+      .exec();
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    const orderItems = await this.orderItemsModel
+      .find({ order_id: order._id })
+      .populate('product_id')
+      .exec();
+
+    const response: any = {
+      message: 'Operation processed successfully',
+      statusCode: HttpStatus.OK,
+      detail: {
+        order_detail: order,
+        products: orderItems,
+      },
+    };
+
+    if (role === 'admin') {
+      response.detail.payment_detail =
+        await this.paymentService.findOneByChargeId(order.payment_id.charge_id);
+    }
+
+    return response;
+  }
+
   async getAllOrder(getAllOrderDto: GetAllOrderDto) {
     const query: any = {};
 

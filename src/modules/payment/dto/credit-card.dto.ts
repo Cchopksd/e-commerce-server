@@ -26,3 +26,21 @@ export class CreatePayWithCreditCardDto {
   @IsOptional()
   couple_name?: string;
 }
+
+export class PayWithCreditCardAgainDto {
+  @IsString()
+  @IsNotEmpty()
+  order_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  customer_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  card_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  currency: string;
+}

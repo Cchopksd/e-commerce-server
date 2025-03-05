@@ -28,7 +28,10 @@ import { ItemDto } from './dto/source.dto';
 import { CartService } from '../cart/cart.service';
 import { ProductService } from '../product/product.service';
 import { OrderService } from '../order/order.service';
-import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
+import {
+  CreatePayWithCreditCardDto,
+  PayWithCreditCardAgainDto,
+} from './dto/credit-card.dto';
 import { PromptPayDto } from './dto/prompt-pay-dto';
 import { CoupleService } from '../couple/couple.service';
 
@@ -297,7 +300,10 @@ export class PaymentService {
             charge_id: creditCard.id,
             user_id: createPayWithCreditCardDto.user_id,
             amount: creditCard?.amount,
-            status: OrderStatus.Paid,
+            status:
+              creditCard?.status === 'successful'
+                ? OrderStatus.Paid
+                : OrderStatus.Unpaid,
             payment_method: 'creditCard',
             expires_at: creditCard.expires_at,
           },
@@ -310,7 +316,10 @@ export class PaymentService {
         user_id: createPayWithCreditCardDto.user_id,
         payment_id: payment[0]._id.toString(),
         shipping_address: createPayWithCreditCardDto.address_id,
-        order_status: OrderStatus.Paid,
+        order_status:
+          creditCard?.status === 'successful'
+            ? OrderStatus.Paid
+            : OrderStatus.Unpaid,
         product_info: cartItems.map((item: any) => ({
           product_id: item.product_id._id,
           quantity: item.quantity,
@@ -322,7 +331,6 @@ export class PaymentService {
         prepareOrder,
         transactionSession,
       );
-
 
       // Step 9: Destroy cart
       const destroyCart = await this.cartService.destroyCart(
@@ -344,7 +352,10 @@ export class PaymentService {
           order_id: createOrder._id,
           chargeId: creditCard.id,
           amount: creditCard?.amount,
-          status: creditCard?.status,
+          status:
+            creditCard?.status === 'successful'
+              ? OrderStatus.Paid
+              : OrderStatus.Unpaid,
           return_uri: creditCard.return_uri,
           expires_at: creditCard.expires_at,
         },
@@ -353,6 +364,66 @@ export class PaymentService {
       console.error('Error Pay with credit card:', error);
 
       if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      if (error.code && error.message) {
+        throw new InternalServerErrorException({
+          message: 'Credit card failed due to Omise API error',
+          error: error.message,
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+      }
+
+      throw new InternalServerErrorException({
+        message: 'Credit card failed due to an unexpected error',
+        error: error.message || 'Unknown error occurred',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+
+  async payWithCreditCardAgain(creditPaymentDto: PayWithCreditCardAgainDto) {
+    try {
+      const transactionSession = await this.connection.startSession();
+      transactionSession.startTransaction();
+
+      const orderDetail = await this.orderService.getOrderById(
+        creditPaymentDto.order_id,
+        'user',
+      );
+      const orderItems = await this.orderService.getOrderItems(
+        orderDetail.detail.order_detail._id.toString(),
+      );
+
+      // Step 2: Calculate total amount
+      let totalAmount = Math.floor(
+        orderItems.reduce(
+          (sum, item) => sum + item.price_at_purchase * 100 * item.quantity,
+          0,
+        ),
+      );
+      console.log(totalAmount);
+
+      // Step 3: Create payment
+      const creditCard = await this.omise.charges.create({
+        amount: totalAmount,
+        currency: 'thb',
+        customer: creditPaymentDto.customer_id,
+        card: creditPaymentDto.card_id,
+      });
+    } catch (error) {
+      console.error('Error Pay with credit card:', error);
+
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      if (error instanceof BadRequestException) {
         throw error;
       }
 
