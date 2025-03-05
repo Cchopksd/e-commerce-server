@@ -13,6 +13,7 @@ import { AddressModule } from '../address/address.module';
 import { ReviewModule } from '../review/review.module';
 import { PaymentGateway } from './payment.gateway';
 import { CoupleModule } from '../couple/couple.module';
+import { CardService } from './card.service';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { CoupleModule } from '../couple/couple.module';
     CoupleModule,
   ],
   controllers: [PaymentController, WebhookController],
-  providers: [PaymentService, PaymentGateway],
+  providers: [PaymentService, CardService, PaymentGateway],
   exports: [PaymentService],
 })
 export class PaymentModule {}

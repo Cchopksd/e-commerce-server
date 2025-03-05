@@ -253,7 +253,6 @@ export class PaymentService {
         }
 
         item.map((item) => {
-          console.log(item.category, couple.category);
           if (item.category !== couple.category) {
             throw new BadRequestException(
               'Couple is not support with this item: ' + item.name,

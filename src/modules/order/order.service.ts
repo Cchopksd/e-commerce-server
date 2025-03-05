@@ -302,7 +302,6 @@ export class OrderService {
     order_id: string,
     updateOrderDto: UpdateOrderDto,
   ): Promise<OrderResponse> {
-    console.log(updateOrderDto.status);
     if (
       !Object.values(OrderStatus).includes(updateOrderDto.status as OrderStatus)
     ) {

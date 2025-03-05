@@ -13,13 +13,20 @@ import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { CreateSourceDto } from './dto/source.dto';
-import { CreateCreditCardDto, CreateNewCreditCardDto } from './dto/create-credit-card.dto';
+import {
+  CreateCreditCardDto,
+  CreateNewCreditCardDto,
+} from './dto/create-credit-card.dto';
 import { CreatePayWithCreditCardDto } from './dto/credit-card.dto';
 import { PromptPayDto } from './dto/prompt-pay-dto';
+import { CardService } from './card.service';
 
 @Controller('payment')
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly cardService: CardService,
+  ) {}
 
   @Post('add-credit-card')
   async card(@Body() createCreditCardDto: CreateCreditCardDto) {
@@ -79,5 +86,13 @@ export class PaymentController {
   @Get('get-payment-by-id/:id')
   getPaymentByPaymentID(@Param('id') id: string) {
     return this.paymentService.getPaymentByPaymentID(id);
+  }
+
+  @Delete('remove-credit-card')
+  deleteCreditCard(
+    @Query('card_id') card_id: string,
+    @Query('cust_id') cust_id: string,
+  ) {
+    return this.cardService.deleteCreditCard({ card_id, cust_id });
   }
 }
