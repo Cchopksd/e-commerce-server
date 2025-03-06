@@ -31,9 +31,7 @@ export class PaymentGateway
   private readonly logger = new Logger(PaymentGateway.name);
   private readonly connections = new Map<string, ConnectionMap>();
 
-  constructor() {
-   
-  }
+  constructor() {}
 
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
@@ -46,8 +44,6 @@ export class PaymentGateway
       }
 
       this.logger.log(`Client connected: ${client.id}`);
-
-   
     } catch (error) {
       this.logger.error('Error in handleConnection:', error);
       client?.disconnect(true);
@@ -91,7 +87,6 @@ export class PaymentGateway
 
       const { user_id, charge_id } = data;
       const key = `${user_id}:${charge_id}`;
-
 
       this.connections.set(key, {
         socket_id: client.id,

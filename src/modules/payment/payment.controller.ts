@@ -17,7 +17,10 @@ import {
   CreateCreditCardDto,
   CreateNewCreditCardDto,
 } from './dto/create-credit-card.dto';
-import { CreatePayWithCreditCardDto, PayWithCreditCardAgainDto } from './dto/credit-card.dto';
+import {
+  CreatePayWithCreditCardDto,
+  PayWithCreditCardAgainDto,
+} from './dto/credit-card.dto';
 import { PromptPayDto } from './dto/prompt-pay-dto';
 import { CardService } from './card.service';
 
@@ -72,9 +75,9 @@ export class PaymentController {
   async creditCardAgain(
     @Body() payWithCreditCardAgainDto: PayWithCreditCardAgainDto,
   ) {
-    const result = await this.paymentService.payWithCreditCardAgain(
-      payWithCreditCardAgainDto,
-    );
+    const result = await this.paymentService.payWithCreditCardAgain({
+      creditPaymentDto: payWithCreditCardAgainDto,
+    });
     return result;
   }
 

@@ -387,11 +387,12 @@ export class PaymentService {
     }
   }
 
-  async payWithCreditCardAgain(creditPaymentDto: PayWithCreditCardAgainDto) {
+  async payWithCreditCardAgain({
+    creditPaymentDto,
+  }: {
+    creditPaymentDto: PayWithCreditCardAgainDto;
+  }) {
     try {
-      const transactionSession = await this.connection.startSession();
-      transactionSession.startTransaction();
-
       const orderDetail = await this.orderService.getOrderById(
         creditPaymentDto.order_id,
         'user',
@@ -407,7 +408,6 @@ export class PaymentService {
           0,
         ),
       );
-      console.log(totalAmount);
 
       // Step 3: Create payment
       const creditCard = await this.omise.charges.create({
@@ -416,6 +416,28 @@ export class PaymentService {
         customer: creditPaymentDto.customer_id,
         card: creditPaymentDto.card_id,
       });
+
+      if (creditCard.status === 'failed') {
+        throw new BadRequestException(creditCard.failure_message);
+      }
+
+      if (creditCard.status === 'successful') {
+        await this.orderService.updateOrder({
+          payment_id: orderDetail.detail.order_detail.payment_id,
+          status: OrderStatus.Paid,
+        });
+
+        return {
+          message: 'payment has been paid successfully',
+          statusCode: HttpStatus.OK,
+          detail: {
+            order_id: orderDetail.detail.order_detail._id,
+            amount: creditCard.amount,
+            status: creditCard.status,
+            return_uri: creditCard.return_uri,
+          },
+        };
+      }
     } catch (error) {
       console.error('Error Pay with credit card:', error);
 
