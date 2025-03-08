@@ -587,7 +587,7 @@ export class PaymentService {
       const charge = {
         type: createSourceDto.type,
         amount: totalAmount,
-        currency: createSourceDto.currency,
+        currency: 'thb',
         items: itemDto,
         email: createSourceDto.email,
       };
@@ -605,7 +605,7 @@ export class PaymentService {
       const promptPayData = {
         type: chargeToken.type,
         amount: chargeToken.amount,
-        currency: chargeToken.currency,
+        currency: 'thb',
         items: chargeToken.items,
         email: chargeToken.email,
         source: chargeToken.id,
@@ -847,7 +847,7 @@ export class PaymentService {
           detail: {
             payment_id: payment._id,
             amount: paymentDetail.amount,
-            currency: paymentDetail.currency,
+            currency: 'thb',
             status: paymentDetail.status,
             payment_method: 'promptPay',
             created_at: paymentDetail.created_at,
@@ -866,7 +866,7 @@ export class PaymentService {
       return {
         payment_id: payment._id,
         amount: paymentDetail.amount,
-        currency: paymentDetail.currency,
+        currency: 'thb',
         status: paymentDetail.status,
         payment_method: payment.payment_method,
         created_at: paymentDetail.created_at,
