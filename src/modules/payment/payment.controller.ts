@@ -34,7 +34,7 @@ export class PaymentController {
   @Post('add-credit-card')
   async card(@Body() createCreditCardDto: CreateCreditCardDto) {
     const token =
-      await this.paymentService.addCustomerAttachCreditCard(
+      await this.cardService.addCustomerAttachCreditCard(
         createCreditCardDto,
       );
     return token;
@@ -45,7 +45,7 @@ export class PaymentController {
     @Body() createCreditCardDto: CreateNewCreditCardDto,
   ) {
     const token =
-      await this.paymentService.attachACardToCustomer(createCreditCardDto);
+      await this.cardService.attachACardToCustomer(createCreditCardDto);
     return token;
   }
 
