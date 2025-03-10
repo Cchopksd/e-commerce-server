@@ -84,7 +84,7 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker pushCI/CD Pipeline kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
+          docker push kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
 
   deploy:
     runs-on: ubuntu-latest
