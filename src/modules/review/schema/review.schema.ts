@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
-import { Order } from 'src/modules/order/schema/order.schema';
-import { Product } from 'src/modules/product/schemas/product.schema';
-import { User } from 'src/modules/user/schemas/user.schema';
+import { Order } from '@/modules/order/schema/order.schema';
+import { Product } from '@/modules/product/schemas/product.schema';
+import { User } from '@/modules/user/schemas/user.schema';
 
 export type ReviewDocument = HydratedDocument<Review>;
 

@@ -8,7 +8,7 @@ import { Favorite, FavoriteDocument } from './schema/favorite.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateFavoriteDto } from './dto/createFavorite.dto';
-import { validateObjectId } from 'src/helpers/objectIdHelper';
+import { validateObjectId } from '@/helpers/objectIdHelper';
 
 @Injectable()
 export class FavoriteService {

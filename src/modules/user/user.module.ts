@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/modules/user/schemas/user.schema';
+import { User, UserSchema } from '@/modules/user/schemas/user.schema';
 import { Address, AddressSchema } from '../address/schemas/address.schema';
 import { AddressService } from '../address/address.service';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';

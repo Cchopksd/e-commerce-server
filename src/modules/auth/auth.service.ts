@@ -10,7 +10,7 @@ import axios from 'axios';
 import * as jwt from 'jsonwebtoken';
 
 import { UserService } from '../user/user.service';
-import { verifyPassword } from 'src/utils/password.util';
+import { verifyPassword } from '@/utils/password.util';
 import { Role } from './enums/role.enum';
 
 const AUTH_ERROR_MESSAGES = {

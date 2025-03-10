@@ -14,7 +14,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Cart, CartDocument } from './schemas/cart.schema';
 import { CartItem, CartItemDocument } from './schemas/cart_item.schema';
 import { ProductService } from '../product/product.service';
-import { validateObjectId } from 'src/helpers/objectIdHelper';
+import { validateObjectId } from '@/helpers/objectIdHelper';
 import { AddressService } from '../address/address.service';
 
 @Injectable()

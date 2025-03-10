@@ -20,7 +20,6 @@ import { Roles } from '../auth/decorator/role.decorator';
 import { Public } from '../auth/decorator/auth.decorator';
 import { ValidateUserGuard } from '../auth/user.guard';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ImageValidation } from 'src/pipes/ParseFilePipe.pipe';
 
 @Controller('user')
 export class UserController {

@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
-import { Address } from 'src/modules/address/schemas/address.schema';
-import { User } from 'src/modules/user/schemas/user.schema';
+import { Address } from '@/modules/address/schemas/address.schema';
+import { User } from '@/modules/user/schemas/user.schema';
 import { OrderStatus } from '../enums/status';
-import { Payment } from 'src/modules/payment/schemas/payment.schema';
+import { Payment } from '@/modules/payment/schemas/payment.schema';
 import { ShippingProvider } from '../enums/shipping-provider';
 
 export type OrderDocument = HydratedDocument<Order>;

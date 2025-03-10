@@ -26,7 +26,7 @@ import {
   FileInterceptor,
   FilesInterceptor,
 } from '@nestjs/platform-express';
-import { ImageValidation } from 'src/pipes/ParseFilePipe.pipe';
+import { ImageValidation } from '@/pipes/ParseFilePipe.pipe';
 import { GetAllProductDto } from './dto/get-Product.dto';
 
 @Controller('product')

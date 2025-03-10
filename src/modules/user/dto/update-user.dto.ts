@@ -6,6 +6,9 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
+  Matches,
+  Max,
+  Min,
 } from 'class-validator';
 import { IsEnum } from 'class-validator';
 import { UserRole } from '../schemas/user.schema';
@@ -26,11 +29,14 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
-  phone: string;
+  @Matches(/^[0-9]{10}$/, { message: 'Phone number must be exactly 10 digits' })
+  phone?: string;
 
-  @Transform(({ value }) => Number(value))
+  @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
   @IsNotEmpty()
+  @Min(18, { message: 'Age must be at least 18' })
+  @Max(100, { message: 'Age must be at most 100' })
   age: number;
 }
 

@@ -9,11 +9,10 @@ import {
 import { CreateUserDto, CreateUserWithGoogleDto } from './dto/create-user.dto';
 import { UpdateUserDto, UpdateUserPasswordDto } from './dto/update-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from 'src/modules/user/schemas/user.schema';
+import { User, UserDocument } from './schemas/user.schema';
 import { Model } from 'mongoose';
-import { hashPassword, verifyPassword } from 'src/utils/password.util';
+import { hashPassword, verifyPassword } from '@/utils/password.util';
 import { Address, AddressDocument } from '../address/schemas/address.schema';
-import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { CloudFlareService } from '../cloudflare/cloudflare.service';
 
 @Injectable()
@@ -21,7 +20,6 @@ export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Address.name) private addressModel: Model<AddressDocument>,
-    private cloudinaryService: CloudinaryService,
     private cloudFlareService: CloudFlareService,
   ) {}
   async create(createUserDto: CreateUserDto) {
@@ -106,7 +104,6 @@ export class UserService {
     files: { images?: Express.Multer.File },
   ) {
     try {
-
       const user = await this.userModel.findById({ _id: user_id });
       if (!user) {
         throw new BadRequestException('User not found');
