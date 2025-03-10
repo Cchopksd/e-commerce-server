@@ -43,7 +43,7 @@ jobs:
         uses: docker/setup-buildx-action@v2 # Set up Docker Buildx
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-docker-${{ github.sha }}
@@ -52,7 +52,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t my-app:${{ github.sha }} . # Replace with your image name
+          docker build . -t e-commerce:${{ github.sha }} # Replace with your image name
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -62,4 +62,4 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push my-app:${{ github.sha }} # Replace with your image name
+          docker push e-commerce:${{ github.sha }} # Replace with your image name
