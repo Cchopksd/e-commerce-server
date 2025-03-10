@@ -52,7 +52,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build . -t e-commerce:${{ github.sha }} # Replace with your image name
+          docker build . -t kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -62,4 +62,4 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push e-commerce:${{ github.sha }} # Replace with your image name
+          docker push kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
