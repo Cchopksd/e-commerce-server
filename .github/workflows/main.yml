@@ -31,28 +31,6 @@ jobs:
       - name: Run Jest tests
         run: npm run test # Run the Jest tests defined in package.json
 
-  zap_scan:
-    runs-on: ubuntu-latest
-    name: Scan ZAP website
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          ref: main
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: ZAP Scan
-        uses: zaproxy/action-baseline@v0.5.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'https://www.zaproxy.org/'
-          # Remove or update if you don't have a custom rules file
-          rules_file_name: '.zap/rules.tsv'
-          cmd_options: '-a'
-
   build-docker:
     runs-on: ubuntu-latest # Runs the Docker build on the latest Ubuntu environment
     needs: test # Ensure this job only runs after the 'test' job passes
@@ -96,10 +74,15 @@ jobs:
       - name: Set up SSH to Hostinger VPS
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.HOSTINGER_VPS_IP }} # IP address of your VPS
-          username: ${{ secrets.HOSTINGER_VPS_USER }} # Your VPS SSH username
+          host: ${{ secrets.HOSTINGER_VPS_IP }} # IP address of VPS
+          username: ${{ secrets.HOSTINGER_VPS_USER }} # VPS SSH username
           key: ${{ secrets.HOSTINGER_SSH_KEY }} # SSH private key for login
           port: 22
           script: |
-            # Pull the latest code and restart the app
-            bash /home/your_user/deploy.sh
+            # Pull the latest Docker image and restart the app on your VPS
+            docker pull kiramiz/e-commerce:${{ github.sha }} # Pull the new image tagged with the commit SHA
+            # docker pull kiramiz/e-commerce:latest # Optionally, pull the latest tag if you want the latest image
+            docker-compose --env-file /home/global/e-commerce/.env -f /home/global/e-commerce/docker-compose.yml up -d
+      - name: Send Slack notification
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment completed successfully for commit: '${{ github.sha }}'"}' ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   e-commerce:
@@ -6,37 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: e-commerce
-    environment:
-      - PORT${PORT}
-      - REDIRECT_URI=${REDIRECT_URI}
-      - NODE_ENV${NODE_ENV}
-
-      - LIVE_MODE=${LIVE_MODE}  
-
-      - MONGODB_URI=${MONGODB_URI}    
-      - JWT_SECRET=${JWT_SECRET}   
-                                    
-      - OMISE_PUBLIC_KEY=${OMISE_PUBLIC_KEY}   
-      - OMISE_SECRET_KEY=${OMISE_SECRET_KEY}
-
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}  
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY} 
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-
-      - DOMAIN_NAME=${DOMAIN_NAME}
-      - CLOUDFLARE_ACCOUNT_ID={CLOUDFLARE_ACCOUNT_ID}
-      - CLOUDFLARE_ACCESS_KEY={CLOUDFLARE_ACCESS_KEY}
-      - CLOUDFLARE_ACCESS_KEY={CLOUDFLARE_SECRET_KEY}
-      - CLOUDFLARE_ACCESS_KEY={CLOUDFLARE_BUCKET_NAME}
-
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}  
-
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
 
     ports:
-      - "5500:5500" 
+      - '5500:5500'
     networks:
       - app-network
 
