@@ -1,17 +1,29 @@
-name: Hello World
+name: Run Jest Tests
 
+# Trigger the workflow on push to the 'main' branch or pull requests
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  say-hello:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-latest # Runs the tests on the latest Ubuntu environment
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3 # Checkout the repository
 
-      - name: Print Hello World
-        run: echo "👋 Hello, world!"
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.15.0' # Use the Node.js version you want
+
+      - name: Install dependencies
+        run: npm install # Install your dependencies
+
+      - name: Run Jest tests
+        run: npm run test # Run the Jest tests defined in package.json
