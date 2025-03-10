@@ -1,4 +1,4 @@
-name: Run Jest Tests
+name: CI # Name of the workflow
 
 # Trigger the workflow on push to the 'main' branch or pull requests
 on:
@@ -25,5 +25,41 @@ jobs:
       - name: Install dependencies
         run: npm install # Install your dependencies
 
+      - name: Build App
+        run: npm run build # Build the app
+
       - name: Run Jest tests
         run: npm run test # Run the Jest tests defined in package.json
+
+  build-docker:
+    runs-on: ubuntu-latest # Runs the Docker build on the latest Ubuntu environment
+    needs: test # Ensure this job only runs after the 'test' job passes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # Checkout the repository
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2 # Set up Docker Buildx
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Build Docker image
+        run: |
+          docker build -t my-app:${{ github.sha }} . # Replace with your image name
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }} # Add your Docker Hub username to GitHub secrets
+          password: ${{ secrets.DOCKER_PASSWORD }} # Add your Docker Hub password to GitHub secrets
+
+      - name: Push Docker image
+        run: |
+          docker push my-app:${{ github.sha }} # Replace with your image name
