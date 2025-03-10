@@ -55,58 +55,6 @@ export class PaymentService {
     });
   }
 
-  async getRetrieveACustomer(user_id: string) {
-    try {
-      const cust = await this.cardModel.findOne({ user_id });
-      if (!cust) {
-        throw new NotFoundException({
-          message: 'Customer not found',
-          statusCode: HttpStatus.NOT_FOUND,
-        });
-      }
-
-      const customer = await this.omise.customers.retrieve(cust.cust_id);
-
-      const customer_card = customer.cards.data;
-
-      return {
-        message: 'Customer retrieved successfully',
-        statusCode: HttpStatus.OK,
-        detail: {
-          card: customer_card.map((items: any) => ({
-            cust_id: cust.cust_id,
-            card_id: items.id,
-            name: items.name,
-            brand: items.brand,
-            last_digits: items.last_digits,
-            expiration_month: items.expiration_month,
-            expiration_year: items.expiration_year,
-          })),
-        },
-      };
-    } catch (error) {
-      console.error('Error retrieving customer:', error);
-
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-
-      if (error.code && error.message) {
-        throw new InternalServerErrorException({
-          message: 'Customer retrieval failed due to Omise API error',
-          error: error.message,
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        });
-      }
-
-      throw new InternalServerErrorException({
-        message: 'Customer retrieval failed due to an unexpected error',
-        error: error.message || 'Unknown error occurred',
-        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      });
-    }
-  }
-
   async creditCard(createPayWithCreditCardDto: CreatePayWithCreditCardDto) {
     try {
       const transactionSession = await this.connection.startSession();

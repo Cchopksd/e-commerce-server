@@ -8,6 +8,7 @@ import {
   Delete,
   HttpStatus,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -23,6 +24,8 @@ import {
 } from './dto/credit-card.dto';
 import { PromptPayDto } from './dto/prompt-pay-dto';
 import { CardService } from './card.service';
+import { DeleteCreditCardDto } from './dto/delete-credit-card.dto';
+import { ValidateUserGuard } from '../auth/user.guard';
 
 @Controller('payment')
 export class PaymentController {
@@ -34,9 +37,7 @@ export class PaymentController {
   @Post('add-credit-card')
   async card(@Body() createCreditCardDto: CreateCreditCardDto) {
     const token =
-      await this.cardService.addCustomerAttachCreditCard(
-        createCreditCardDto,
-      );
+      await this.cardService.addCustomerAttachCreditCard(createCreditCardDto);
     return token;
   }
 
@@ -88,7 +89,7 @@ export class PaymentController {
 
   @Get('get-retrieve-customer')
   getRetrieveACustomer(@Query('user_id') user_id: string) {
-    return this.paymentService.getRetrieveACustomer(user_id);
+    return this.cardService.getRetrieveACustomer(user_id);
   }
 
   @Get('charge/:id')
@@ -102,10 +103,8 @@ export class PaymentController {
   }
 
   @Delete('remove-credit-card')
-  deleteCreditCard(
-    @Query('card_id') card_id: string,
-    @Query('cust_id') cust_id: string,
-  ) {
-    return this.cardService.deleteCreditCard({ card_id, cust_id });
+  @UseGuards(ValidateUserGuard)
+  deleteCreditCard(@Query() deleteCreditCardDto: DeleteCreditCardDto) {
+    return this.cardService.deleteCreditCard(deleteCreditCardDto);
   }
 }
