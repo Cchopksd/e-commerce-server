@@ -1,4 +1,4 @@
-name: CI # Name of the workflow
+name: CI/CD Pipeline
 
 # Trigger the workflow on push to the 'main' branch or pull requests
 on:
@@ -31,6 +31,22 @@ jobs:
       - name: Run Jest tests
         run: npm run test # Run the Jest tests defined in package.json
 
+  zap_scan:
+    runs-on: ubuntu-latest
+    name: Scan ZAP website
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: master
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.3.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'https://www.zaproxy.org/'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
   build-docker:
     runs-on: ubuntu-latest # Runs the Docker build on the latest Ubuntu environment
     needs: test # Ensure this job only runs after the 'test' job passes
@@ -62,4 +78,22 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
+          docker pushCI/CD Pipelinekiramiz/e-commerce:${{ github.sha }} # Replace with your image name
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-docker # Ensure deploy job runs after the build job
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH to Hostinger VPS
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_IP }} # IP address of your VPS
+          username: ${{ secrets.HOSTINGER_VPS_USER }} # Your VPS SSH username
+          key: ${{ secrets.HOSTINGER_SSH_KEY }} # SSH private key for login
+          port: 22
+          script: |
+            # Pull the latest code and restart the app
+            bash /home/your_user/deploy.sh
