@@ -64,25 +64,33 @@ jobs:
         run: |
           docker push kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-docker # Ensure deploy job runs after the build job
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Set up SSH to Hostinger VPS
+        id: ssh
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.HOSTINGER_VPS_IP }} # IP address of VPS
-          username: ${{ secrets.HOSTINGER_VPS_USER }} # VPS SSH username
-          key: ${{ secrets.HOSTINGER_SSH_KEY }} # SSH private key for login
+          host: ${{ secrets.HOSTINGER_VPS_IP }}
+          username: ${{ secrets.HOSTINGER_VPS_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: 22
           script: |
-            # Pull the latest Docker image and restart the app on your VPS
-            docker pull kiramiz/e-commerce:${{ github.sha }} # Pull the new image tagged with the commit SHA
-            # docker pull kiramiz/e-commerce:latest # Optionally, pull the latest tag if you want the latest image
-            docker-compose --env-file /home/global/e-commerce/.env -f /home/global/e-commerce/docker-compose.yml up -d
+            # Stop and remove the old container
+            docker-compose --env-file=/home/etc/e-commerce/.env -f /e-commerce/docker-compose.yml down
+
+            # Pull the latest Docker image tagged with the commit SHA
+            docker pull kiramiz/e-commerce:${{ github.sha }} || { echo "Error pulling image"; exit 1; }
+
+            # Optionally, you can pull the latest tag if you prefer to use it instead of the commit SHA
+            # docker pull kiramiz/e-commerce:latest
+
+            # Start the new container with the updated image
+            docker-compose --env-file=/home/etc/e-commerce/.env -f /e-commerce/docker-compose.yml up -d --remove-orphans || { echo "Error starting container"; exit 1; }
+
       - name: Send Slack notification
+        if: success() # Only sends the notification if the previous step succeeded
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment completed successfully for commit: '${{ github.sha }}'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send Slack error notification
+        if: failure() # Sends this if the SSH step failed
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment failed for commit: '${{ github.sha }}'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
