@@ -64,6 +64,11 @@ jobs:
         run: |
           docker push kiramiz/e-commerce:${{ github.sha }} # Replace with your image name
 
+  deploy:
+    runs-on: ubuntu-latest # Runs the deployment on the latest Ubuntu environment
+    needs: build-docker # Ensure this job only runs after the 'build-docker' job passes
+
+    steps:
       - name: Set up SSH to Hostinger VPS
         id: ssh
         uses: appleboy/ssh-action@v0.1.7
@@ -73,24 +78,28 @@ jobs:
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: 22
           script: |
-            # Stop and remove the old container
-            docker-compose --env-file=/home/etc/e-commerce/.env -f /e-commerce/docker-compose.yml down
-
             # Pull the latest Docker image tagged with the commit SHA
             docker pull kiramiz/e-commerce:${{ github.sha }} || { echo "Error pulling image"; exit 1; }
 
             # Optionally, you can pull the latest tag if you prefer to use it instead of the commit SHA
             # docker pull kiramiz/e-commerce:latest
 
+            # Stop and remove the old container
+            docker-compose --env-file=/home/etc/e-commerce/.env -f /e-commerce/docker-compose.yml down
+
             # Start the new container with the updated image
             docker-compose --env-file=/home/etc/e-commerce/.env -f /e-commerce/docker-compose.yml up -d --remove-orphans || { echo "Error starting container"; exit 1; }
 
-      - name: Send Slack notification
-        if: success() # Only sends the notification if the previous step succeeded
+      - name: Send Telegram notification
+        if: success()
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment completed successfully for commit: '${{ github.sha }}'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="✅ Deployment completed successfully for commit: ${{ github.sha }}"
 
-      - name: Send Slack error notification
-        if: failure() # Sends this if the SSH step failed
+      - name: Send Telegram error notification
+        if: failure()
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment failed for commit: '${{ github.sha }}'"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="❌ Deployment failed for commit: ${{ github.sha }}"
