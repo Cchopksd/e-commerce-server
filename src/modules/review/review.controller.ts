@@ -26,4 +26,9 @@ export class ReviewController {
   getIsNoReviewByOrder(@Param('user_id') user_id: string) {
     return this.reviewService.getIsNoReviewByOrder(user_id);
   }
+
+  @Get('get-review-by-order/:order_id')
+  getReviewByOrder(@Param('order_id') order_id: string) {
+    return this.reviewService.getReviewByOrder({ order_id });
+  }
 }

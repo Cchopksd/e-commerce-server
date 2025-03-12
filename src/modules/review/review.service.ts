@@ -9,7 +9,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Review, ReviewDocument } from './schema/review.schema';
 import { Model } from 'mongoose';
 import { CreateReviewDto } from './dto/create-review';
-import { ProductService } from '../product/product.service';
 import { UpdateReviewDto } from './dto/update-review';
 
 @Injectable()
@@ -99,6 +98,27 @@ export class ReviewService {
         .exec();
 
       return review;
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      throw new BadRequestException(
+        'Failed to fetch reviews: ' + error.message,
+      );
+    }
+  }
+
+  async getReviewByOrder({ order_id }: { order_id: string }) {
+    try {
+      const review = await this.reviewModel
+        .find({
+          order: order_id,
+        })
+        .exec();
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Review fetched successfully',
+        data: review,
+      };
     } catch (error) {
       console.error('Error fetching reviews:', error);
       throw new BadRequestException(

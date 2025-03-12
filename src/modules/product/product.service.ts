@@ -66,10 +66,9 @@ export class ProductService {
 
   async findAll(getAllProductDto: GetAllProductDto) {
     let { search, page, user_id, price, category, limit } = getAllProductDto;
-
     const skip = (page - 1) * limit;
 
-    if (limit <= 0) {
+    if (limit <= 0 || !limit) {
       limit = 12;
     }
 
@@ -112,7 +111,6 @@ export class ProductService {
         .skip(skip)
         .limit(limit)
         .exec();
-
       if (user_id) {
         const favoriteProducts =
           await this.favoriteService.getFavoriteByUserAndProducts({

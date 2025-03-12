@@ -81,7 +81,6 @@ jobs:
             # Pull the latest Docker image tagged with the commit SHA
             docker pull kiramiz/e-commerce:${{ github.sha }} || { echo "Error pulling image"; exit 1; }
 
-            # Optionally, you can pull the latest tag if you prefer to use it instead of the commit SHA
             # docker pull kiramiz/e-commerce:latest
 
             # Stop and remove the old container
