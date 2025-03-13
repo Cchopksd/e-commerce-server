@@ -71,6 +71,12 @@ export class PaymentGateway
     }
   }
 
+  // ================== Socket Events ==================
+  // Register a user to receive payment status updates
+  // @Desc Client opens a socket connection
+  // @Next ==> If the user scans the QR code successfully,
+  //            the payment status will be returned to the user
+  // ===================================================
   @SubscribeMessage('register')
   async handleRegister(
     @MessageBody() data: { user_id: string; charge_id: string },
@@ -78,16 +84,21 @@ export class PaymentGateway
   ) {
     try {
       if (!client?.id) {
-        throw new Error('Client ID is undefined');
+        this.logger.error('Client ID is missing');
+        client.emit('error', { message: 'Invalid client connection' });
+        return;
       }
 
-      if (!data?.user_id || !data?.charge_id) {
-        throw new Error('Invalid registration data');
+      const { user_id, charge_id } = data || {};
+      if (!user_id || !charge_id) {
+        this.logger.warn('Invalid registration data received', data);
+        client.emit('error', { message: 'Invalid registration data' });
+        return;
       }
 
-      const { user_id, charge_id } = data;
       const key = `${user_id}:${charge_id}`;
 
+      // Store the connection details
       this.connections.set(key, {
         socket_id: client.id,
         charge_id,
@@ -95,13 +106,17 @@ export class PaymentGateway
       });
 
       this.logger.log(
-        `Registered user_id: ${user_id}, charge_id: ${charge_id}`,
+        `User registered - user_id: ${user_id}, charge_id: ${charge_id}`,
       );
 
+      // Optionally confirm registration to the client
+      client.emit('registration-success', { user_id, charge_id });
+
+      // Send initial empty status or confirmation
       await this.sendToUserWithCharge(user_id, charge_id, '');
     } catch (error) {
-      this.logger.error('Error in handleRegister:', error);
-      client?.emit('error', { message: 'Registration failed' });
+      this.logger.error('Error in handleRegister:', error.message || error);
+      client.emit('error', { message: 'Registration failed' });
     }
   }
 
@@ -116,18 +131,24 @@ export class PaymentGateway
 
       if (!connection) {
         this.logger.warn(
-          `No client found for user_id: ${user_id} and charge_id: ${charge_id}`,
+          `No active connection found for user_id: ${user_id}, charge_id: ${charge_id}`,
         );
         return;
       }
 
-      await this.server
+      // Emit the payment status update to the connected client
+      this.server
         .to(connection.socket_id)
         .emit('payment-status', { status, charge_id });
 
-      this.logger.log(`Status sent to ${user_id}: ${status}`);
+      this.logger.log(
+        `Payment status sent to user_id: ${user_id}, status: ${status}`,
+      );
     } catch (error) {
-      this.logger.error('Error in sendToUserWithCharge:', error);
+      this.logger.error(
+        'Error in sendToUserWithCharge:',
+        error.message || error,
+      );
     }
   }
 }
