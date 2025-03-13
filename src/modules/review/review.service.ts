@@ -76,9 +76,10 @@ export class ReviewService {
   async getByProduct(product_id: string) {
     try {
       const reviews = await this.reviewModel
-        .find({ product: product_id, review: true })
+        .find({ product: product_id, reviewed: true })
         .populate('user')
         .exec();
+
       return reviews;
     } catch (error) {
       console.error('Error fetching reviews:', error);

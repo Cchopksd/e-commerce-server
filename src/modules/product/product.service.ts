@@ -204,6 +204,7 @@ export class ProductService {
         }),
       ]);
 
+
       if (!product) {
         throw new BadRequestException({
           message: 'Cannot find item',
